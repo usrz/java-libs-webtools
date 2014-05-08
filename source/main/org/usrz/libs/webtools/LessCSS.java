@@ -30,7 +30,7 @@ import org.usrz.libs.utils.Charsets;
 public class LessCSS {
 
     private static final String ENGINE_TYPE = "application/javascript";
-    private static final String LESS_RESOURCE = "less-rhino-1.7.0.js";
+    private static final String LESS_RESOURCE = "less-rhino-1.7.0.min.js";
     private static final String ADAPTER_RESOURCE = "less-adapter.js";
 
     private final ScriptEngineManager manager = new ScriptEngineManager(this.getClass().getClassLoader());
