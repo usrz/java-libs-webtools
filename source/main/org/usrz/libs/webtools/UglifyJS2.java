@@ -33,7 +33,7 @@ import org.usrz.libs.utils.Charsets;
 public class UglifyJS2 {
 
     private static final String ENGINE_TYPE = "application/javascript";
-    private static final String UGLIFY_RESOURCE = "uglifyjs-2.4.12.js";
+    private static final String UGLIFY_RESOURCE = "uglifyjs-2.4.12.min.js";
     private static final String ADAPTER_RESOURCE = "uglifyjs-adapter.js";
 
     private final ScriptEngineManager manager = new ScriptEngineManager(this.getClass().getClassLoader());
