@@ -15,6 +15,11 @@
  * ========================================================================== */
 package org.usrz.libs.webtools;
 
+/**
+ * An exception thrown whenever there is a problem using {@link UglifyJS2}.
+ *
+ * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
+ */
 public class UglifyJS2Exception extends RuntimeException {
 
     public UglifyJS2Exception(String message, Throwable cause) {

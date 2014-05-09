@@ -15,6 +15,11 @@
  * ========================================================================== */
 package org.usrz.libs.webtools;
 
+/**
+ * An exception thrown whenever there is a problem using {@link LessCSS}.
+ *
+ * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
+ */
 public class LessCSSException extends RuntimeException {
 
     public LessCSSException(String message, Throwable cause) {
