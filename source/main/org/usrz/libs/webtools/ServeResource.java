@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -60,6 +61,8 @@ import org.usrz.libs.logging.Log;
  *   <dd><em>(Default: {@code false})</em> Whether to minify JavaScript, CSS and LessCSS resources.</dd>
  *   <dt>{@code cache}</dt>
  *   <dd><em>(Default: {@code no-cache})</em> A {@link Duration} for the HTTP cache headers.</dd>
+ *   <dt>{@code charset}</dt>
+ *   <dd><em>(Default: {@code UTF-8})</em> The default charset name for text files.</dd>
  * </dl>
  *
  * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
@@ -68,8 +71,8 @@ import org.usrz.libs.logging.Log;
 @Singleton
 public class ServeResource {
 
-    private static final MediaType MEDIA_TYPE_CSS = new MediaType("text", "css").withCharset(UTF8.name());
-    private static final MediaType MEDIA_TYPE_JS = new MediaType("application", "javascript").withCharset(UTF8.name());
+    private final MediaType styleMediaType;
+    private final MediaType scriptMediaType;
 
     private static final Log log = new Log();
 
@@ -79,6 +82,8 @@ public class ServeResource {
 
     private final File root;
     private final boolean minify;
+    private final Charset charset;
+    private final String charsetName;
     private final Duration cacheDuration;
     private final CacheControl cacheControl;
 
@@ -95,10 +100,15 @@ public class ServeResource {
             throw new IllegalArgumentException("Invalid resource root \"" + root + "\"");
         minify = configurations.get("minify", false);
 
-        cacheDuration = configurations.getDuration("cache", Duration.ZERO);
+        cacheDuration = configurations.get("cache", Duration.ZERO);
         cacheControl = new CacheControl();
         cacheControl.setMaxAge((int) cacheDuration.getSeconds());
         cacheControl.setNoCache(Duration.ZERO.equals(cacheDuration));
+
+        charset = Charset.forName(configurations.get("charset", UTF8.name()));
+        charsetName = charset.name();
+        styleMediaType = new MediaType("text", "css").withCharset(charsetName);
+        scriptMediaType = new MediaType("application", "javascript").withCharset(charsetName);
     }
 
     /**
@@ -149,7 +159,7 @@ public class ServeResource {
                 log.debug("Lessifying resource \"%s\"", resourceFile);
                 cached = new Entry(resourceFile.lastModified(),
                                    less.convert(load(resourceFile), minify),
-                                   MEDIA_TYPE_CSS);
+                                   styleMediaType);
 
             } else if (fileName.endsWith(".js") && minify) {
 
@@ -157,7 +167,7 @@ public class ServeResource {
                 log.debug("Uglifying resource \"%s\"", resourceFile);
                 cached = new Entry(resourceFile.lastModified(),
                                    uglify.convert(load(resourceFile), minify, minify),
-                                   MEDIA_TYPE_JS);
+                                   scriptMediaType);
             }
 
             /* Do we have anything to cache? */
@@ -177,9 +187,18 @@ public class ServeResource {
 
         } else {
             log.debug("Serving file resource \"%s\"", resourceFile);
+
+            /* If text/* or application/javascript, append encoding */
+            MediaType type = MediaTypes.get(resourceFile);
+            if (type.getType().equals("text") || scriptMediaType.isCompatible(type)) {
+                type = type.withCharset(charsetName);
+
+            }
+
+            /* Our file is served! */
             response.entity(resourceFile)
                     .lastModified(new Date(resourceFile.lastModified()))
-                    .type(MediaTypes.get(resourceFile));
+                    .type(type);
         }
 
         /* Caching headers and build response */
@@ -200,7 +219,7 @@ public class ServeResource {
         while ((read = input.read(buffer)) >= 0) output.write(buffer, 0, read);
         input.close();
         output.close();
-        return new String(output.toByteArray(), UTF8);
+        return new String(output.toByteArray(), charset);
     }
 
     /* ====================================================================== */
