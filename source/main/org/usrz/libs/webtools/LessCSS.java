@@ -27,6 +27,11 @@ import javax.script.ScriptEngineManager;
 
 import org.usrz.libs.utils.Charsets;
 
+/**
+ * A simple wrapper for <a href="http://lesscss.org/">LessCSS</a>.
+ *
+ * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
+ */
 public class LessCSS {
 
     private static final String ENGINE_TYPE = "application/javascript";
@@ -37,6 +42,9 @@ public class LessCSS {
     private final ScriptEngine engine = manager.getEngineByMimeType(ENGINE_TYPE);
     private final Invocable invocable = (Invocable) engine;
 
+    /**
+     * Create a new {@link LessCSS} engine.
+     */
     public LessCSS() {
         try {
             engine.put(ScriptEngine.FILENAME, LESS_RESOURCE);
@@ -53,6 +61,10 @@ public class LessCSS {
         }
     }
 
+    /**
+     * Convert the specified <em>LessCSS</em> source into a <em>CSS</em>
+     * optionally compressing it.
+     */
     public String convert(String less, boolean compress) {
         final Map<String, Object> options = Collections.singletonMap("compress", compress);
         try {

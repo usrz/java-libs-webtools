@@ -30,6 +30,12 @@ import org.usrz.libs.logging.Log;
 import org.usrz.libs.logging.Logging;
 import org.usrz.libs.utils.Charsets;
 
+/**
+ * A simple wrapper for <a href="https://github.com/mishoo/UglifyJS2">UglifyJS
+ * 2.x</a>.
+ *
+ * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
+ */
 public class UglifyJS2 {
 
     private static final String ENGINE_TYPE = "application/javascript";
@@ -40,6 +46,9 @@ public class UglifyJS2 {
     private final ScriptEngine engine = manager.getEngineByMimeType(ENGINE_TYPE);
     private final Invocable invocable = (Invocable) engine;
 
+    /**
+     * Create a new {@link UglifyJS} engine.
+     */
     public UglifyJS2() {
         Logging.init();
         try {
@@ -59,6 +68,9 @@ public class UglifyJS2 {
         }
     }
 
+    /**
+     * Uglify the specified <em>JavaScript</em> source.
+     */
     public String convert(String less, boolean compress, boolean mangle) {
         final Map<String, Object> options = new HashMap<>();
         options.put("compress", compress);
