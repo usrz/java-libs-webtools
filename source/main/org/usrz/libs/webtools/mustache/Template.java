@@ -13,17 +13,21 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.mustache;
 
-/**
- * An exception thrown whenever there is a problem using {@link LessCSS}.
- *
- * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
- */
-public class LessCSSException extends RuntimeException {
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    public LessCSSException(String message, Throwable cause) {
-        super(message, cause);
-    }
+@Inherited
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Template {
+
+    String value();
 
 }

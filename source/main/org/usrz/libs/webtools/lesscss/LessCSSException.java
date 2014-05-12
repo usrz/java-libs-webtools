@@ -13,33 +13,17 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.lesscss;
 
-import static org.usrz.libs.utils.Charsets.UTF8;
+/**
+ * An exception thrown whenever there is a problem using {@link LessCSS}.
+ *
+ * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
+ */
+public class LessCSSException extends RuntimeException {
 
-import org.testng.annotations.Test;
-import org.usrz.libs.testing.AbstractTest;
-import org.usrz.libs.testing.IO;
-import org.usrz.libs.webtools.lesscss.LessCSS;
-
-public class LessTest extends AbstractTest {
-
-    @Test
-    public void testLess()
-    throws Exception {
-        final String less = new String(IO.read("test.less"), UTF8);
-        final String css = new String(IO.read("test.css"), UTF8);
-        final String result = new LessCSS().convert(less, false);
-        assertEquals(result, css);
-    }
-
-    @Test
-    public void testLessCompressed()
-    throws Exception {
-        final String less = new String(IO.read("test.less"), UTF8);
-        final String css = new String(IO.read("test.min.css"), UTF8);
-        final String result = new LessCSS().convert(less, true);
-        assertEquals(result, css);
+    public LessCSSException(String message, Throwable cause) {
+        super(message, cause);
     }
 
 }

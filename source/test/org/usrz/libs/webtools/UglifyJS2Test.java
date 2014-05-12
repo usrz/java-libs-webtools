@@ -20,6 +20,7 @@ import static org.usrz.libs.utils.Charsets.UTF8;
 import org.testng.annotations.Test;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
+import org.usrz.libs.webtools.uglifyjs.UglifyJS;
 
 public class UglifyJS2Test extends AbstractTest {
 
@@ -28,7 +29,7 @@ public class UglifyJS2Test extends AbstractTest {
     throws Exception {
         final String script = new String(IO.read("test.js"), UTF8);
         final String min = new String(IO.read("test.min.js"), UTF8);
-        final String result = new UglifyJS2().convert(script, false, false);
+        final String result = new UglifyJS().convert(script, false, false);
         assertEquals(result, min);
     }
 
@@ -37,7 +38,7 @@ public class UglifyJS2Test extends AbstractTest {
     throws Exception {
         final String script = new String(IO.read("test.js"), UTF8);
         final String min = new String(IO.read("test.c.min.js"), UTF8);
-        final String result = new UglifyJS2().convert(script, true, false);
+        final String result = new UglifyJS().convert(script, true, false);
         assertEquals(result, min);
     }
 
@@ -46,7 +47,7 @@ public class UglifyJS2Test extends AbstractTest {
     throws Exception {
         final String script = new String(IO.read("test.js"), UTF8);
         final String min = new String(IO.read("test.m.min.js"), UTF8);
-        final String result = new UglifyJS2().convert(script, false, true);
+        final String result = new UglifyJS().convert(script, false, true);
         assertEquals(result, min);
     }
 
@@ -55,7 +56,7 @@ public class UglifyJS2Test extends AbstractTest {
     throws Exception {
         final String script = new String(IO.read("test.js"), UTF8);
         final String min = new String(IO.read("test.cm.min.js"), UTF8);
-        final String result = new UglifyJS2().convert(script, true, true);
+        final String result = new UglifyJS().convert(script, true, true);
         assertEquals(result, min);
     }
 }

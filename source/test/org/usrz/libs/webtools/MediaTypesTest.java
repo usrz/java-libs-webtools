@@ -47,9 +47,9 @@ public class MediaTypesTest extends AbstractTest {
 
     @Test
     public void testMediaTypesWithCharset() {
-        assertEquals(MediaTypes.get(new File("test.js")).withCharset(UTF8.name()).toString(), "application/javascript;charset=UTF-8");
-        assertEquals(MediaTypes.get("test.js").withCharset(UTF8.name()).toString(), "application/javascript;charset=UTF-8");
-        assertEquals(MediaTypes.get(".js").withCharset(UTF8.name()).toString(), "application/javascript;charset=UTF-8");
-        assertEquals(MediaTypes.get("js").withCharset(UTF8.name()).toString(), "application/javascript;charset=UTF-8");
+        assertEquals(MediaTypes.get(new File("test.js")).withCharset(UTF8.name()).toString(), "application/javascript; charset=UTF-8");
+        assertEquals(MediaTypes.get("test.js").withCharset(UTF8.name()).toString(), "application/javascript; charset=UTF-8");
+        assertEquals(MediaTypes.get(".js").withCharset(UTF8.name()).toString(), "application/javascript; charset=UTF-8");
+        assertEquals(MediaTypes.get("js").withCharset(UTF8.name()).toString(), "application/javascript; charset=UTF-8");
     }
 }

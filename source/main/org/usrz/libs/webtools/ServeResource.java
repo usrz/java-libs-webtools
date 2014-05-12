@@ -42,6 +42,8 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.usrz.libs.configurations.Configurations;
 import org.usrz.libs.logging.Log;
+import org.usrz.libs.webtools.lesscss.LessCSS;
+import org.usrz.libs.webtools.uglifyjs.UglifyJS;
 
 /**
  * A <em>JAX-RS</em> resource serving static files.
@@ -77,7 +79,7 @@ public class ServeResource {
     private static final Log log = new Log();
 
     private final LessCSS less = new LessCSS();
-    private final UglifyJS2 uglify = new UglifyJS2();
+    private final UglifyJS uglify = new UglifyJS();
     private final ConcurrentMap<File, Entry> cache = new ConcurrentHashMap<>();
 
     private final File root;

@@ -13,33 +13,46 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.mustache;
 
-import static org.usrz.libs.utils.Charsets.UTF8;
+import static org.usrz.libs.utils.Check.notNull;
 
-import org.testng.annotations.Test;
-import org.usrz.libs.testing.AbstractTest;
-import org.usrz.libs.testing.IO;
-import org.usrz.libs.webtools.lesscss.LessCSS;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.Map.Entry;
 
-public class LessTest extends AbstractTest {
+import org.usrz.libs.webtools.resources.Resource;
 
-    @Test
-    public void testLess()
-    throws Exception {
-        final String less = new String(IO.read("test.less"), UTF8);
-        final String css = new String(IO.read("test.css"), UTF8);
-        final String result = new LessCSS().convert(less, false);
-        assertEquals(result, css);
+import com.github.mustachejava.Mustache;
+
+public class ReloadingMustache {
+
+    private final ReloadingMustacheFactory factory;
+    private final String name;
+    private Mustache mustache;
+    private Resource resource;
+
+    protected ReloadingMustache(ReloadingMustacheFactory factory, String name) {
+        this.factory = notNull(factory, "Null factory");
+        this.name = notNull(name, "Null resource name");
+        compile();
     }
 
-    @Test
-    public void testLessCompressed()
-    throws Exception {
-        final String less = new String(IO.read("test.less"), UTF8);
-        final String css = new String(IO.read("test.min.css"), UTF8);
-        final String result = new LessCSS().convert(less, true);
-        assertEquals(result, css);
+    public String execute(Object scope) {
+        final StringWriter writer = new StringWriter();
+        this.execute(writer, scope);
+        writer.flush();
+        return writer.toString();
     }
 
+    public void execute(Writer output, Object scope) {
+        if (resource.hasChanged()) compile();
+        mustache.execute(output, scope);
+    }
+
+    private void compile() {
+        final Entry<Mustache, Resource> compiled = factory.compileTemplate(name);
+        mustache = compiled.getKey();
+        resource = compiled.getValue();
+    }
 }

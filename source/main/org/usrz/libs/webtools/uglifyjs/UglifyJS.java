@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.uglifyjs;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +36,7 @@ import org.usrz.libs.utils.Charsets;
  *
  * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
  */
-public class UglifyJS2 {
+public class UglifyJS {
 
     private static final String ENGINE_TYPE = "application/javascript";
     private static final String UGLIFY_RESOURCE = "uglifyjs-2.4.12.min.js";
@@ -49,7 +49,7 @@ public class UglifyJS2 {
     /**
      * Create a new {@link UglifyJS} engine.
      */
-    public UglifyJS2() {
+    public UglifyJS() {
         Logging.init();
         try {
             engine.put(ScriptEngine.FILENAME, UGLIFY_RESOURCE);
@@ -64,7 +64,7 @@ public class UglifyJS2 {
 
             engine.getBindings(ScriptContext.GLOBAL_SCOPE).put("__logger", new Log());
         } catch (Exception exception) {
-            throw new UglifyJS2Exception("Unable to initialize UglifyJS2 engine", exception);
+            throw new UglifyJSException("Unable to initialize UglifyJS2 engine", exception);
         }
     }
 
@@ -79,7 +79,7 @@ public class UglifyJS2 {
         try {
             return invocable.invokeFunction("_uglify_process", less, options).toString();
         } catch (Exception exception) {
-            throw new UglifyJS2Exception("Unable to uglify script", exception);
+            throw new UglifyJSException("Unable to uglify script", exception);
         }
     }
 

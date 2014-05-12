@@ -119,7 +119,7 @@ public class MediaTypes {
             } catch (Exception exception) {
                 /* When we don't have a RuntimeDelegate */
                 final StringBuilder builder = new StringBuilder(getType()).append('/').append(getSubtype());
-                getParameters().forEach((k, v) -> builder.append(';').append(k).append('=').append(v));
+                getParameters().forEach((k, v) -> builder.append("; ").append(k).append('=').append(v));
                 return builder.toString();
             }
         }
