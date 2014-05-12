@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.uglifyjs;
 
 /**
- * An exception thrown whenever there is a problem using {@link LessCSS}.
+ * An exception thrown whenever there is a problem using {@link UglifyJS}.
  *
  * @author <a href="mailto:pier@usrz.com">Pier Fumagalli</a>
  */
-public class LessCSSException extends RuntimeException {
+public class UglifyJSException extends RuntimeException {
 
-    public LessCSSException(String message, Throwable cause) {
+    public UglifyJSException(String message, Throwable cause) {
         super(message, cause);
     }
 
