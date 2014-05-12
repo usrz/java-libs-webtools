@@ -15,44 +15,19 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.mustache;
 
-import static org.usrz.libs.utils.Check.notNull;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.Map.Entry;
+@Inherited
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Template {
 
-import org.usrz.libs.webtools.resources.Resource;
+    String value();
 
-import com.github.mustachejava.Mustache;
-
-public class ReloadingMustache {
-
-    private final ReloadingMustacheFactory factory;
-    private final String name;
-    private Mustache mustache;
-    private Resource resource;
-
-    protected ReloadingMustache(ReloadingMustacheFactory factory, String name) {
-        this.factory = notNull(factory, "Null factory");
-        this.name = notNull(name, "Null resource name");
-        compile();
-    }
-
-    public String execute(Object scope) {
-        final StringWriter writer = new StringWriter();
-        this.execute(writer, scope);
-        writer.flush();
-        return writer.toString();
-    }
-
-    public void execute(Writer output, Object scope) {
-        if (resource.hasChanged()) compile();
-        mustache.execute(output, scope);
-    }
-
-    private void compile() {
-        final Entry<Mustache, Resource> compiled = factory.compileTemplate(name);
-        mustache = compiled.getKey();
-        resource = compiled.getValue();
-    }
 }
