@@ -19,7 +19,6 @@ import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Collections;
-import java.util.Map;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -112,15 +111,13 @@ public class MustacheJAXRSTest extends AbstractTest {
         @GET
         @Path("withResponse")
         public Response withResponse() {
-            final Map<String, String> context = Collections.singletonMap("name", "mustache.jax.response");
-            return Response.ok(new View("template.mustache", context)).build();
+            return View.template("template.mustache").with("name", "mustache.jax.response").response().build();
         }
 
         @GET
         @Path("withView")
         public View withView() {
-            final Map<String, String> context = Collections.singletonMap("name", "mustache.jax.view");
-            return new View("template.mustache", context);
+            return View.template("template.mustache").with("name", "mustache.jax.view").view();
         }
 
         @GET
