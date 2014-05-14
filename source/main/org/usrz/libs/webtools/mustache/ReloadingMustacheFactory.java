@@ -31,6 +31,7 @@ import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheException;
 import com.google.common.cache.ForwardingLoadingCache;
 import com.google.common.cache.LoadingCache;
+import com.google.inject.Binder;
 
 public class ReloadingMustacheFactory {
 
@@ -45,6 +46,15 @@ public class ReloadingMustacheFactory {
         manager = new ResourceManager(root);
         factory = new Factory(root);
     }
+
+    /* ====================================================================== */
+
+    public static final void bind(Binder binder, File root) {
+        binder.bind(ReloadingMustacheFactory.class)
+              .toInstance(new ReloadingMustacheFactory(root));
+    }
+
+    /* ====================================================================== */
 
     public ReloadingMustache compile(String name) {
         return new ReloadingMustache(this, name);
