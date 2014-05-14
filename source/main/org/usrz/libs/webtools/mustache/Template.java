@@ -15,17 +15,19 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.mustache;
 
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Inherited
-@Target({ElementType.TYPE, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Retention(RUNTIME)
+@Target({TYPE, METHOD})
 public @interface Template {
 
     String value();
