@@ -17,6 +17,8 @@ package org.usrz.libs.webtools.mustache;
 
 import java.io.File;
 import java.io.Reader;
+import java.io.StringReader;
+import java.io.Writer;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import org.usrz.libs.logging.Log;
 import org.usrz.libs.webtools.resources.Resource;
 import org.usrz.libs.webtools.resources.ResourceManager;
+import org.usrz.libs.webtools.resources.Resources;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
@@ -33,10 +36,10 @@ import com.google.common.cache.ForwardingLoadingCache;
 import com.google.common.cache.LoadingCache;
 import com.google.inject.Binder;
 
-public class ReloadingMustacheFactory {
+public class ReloadingMustacheFactory implements TemplateFactory {
 
-    private final ConcurrentHashMap<String, Resource> resources = new ConcurrentHashMap<>();
-    private final ThreadLocal<Resource> resourceLocal = new ThreadLocal<>();
+    private final ConcurrentHashMap<String, Resources> cachedResources = new ConcurrentHashMap<>();
+    private final ThreadLocal<Resources> currentResources = new ThreadLocal<>();
     private final Log log = new Log();
 
     private final ResourceManager manager;
@@ -50,33 +53,60 @@ public class ReloadingMustacheFactory {
     /* ====================================================================== */
 
     public static final void bind(Binder binder, File root) {
-        binder.bind(ReloadingMustacheFactory.class)
+        binder.bind(TemplateFactory.class)
               .toInstance(new ReloadingMustacheFactory(root));
     }
 
     /* ====================================================================== */
 
-    public ReloadingMustache compile(String name) {
-        return new ReloadingMustache(this, name);
+    @Override
+    public boolean canCompile(String name) {
+        final Resource resource = manager.getResource(name);
+        if (resource != null) return true;
+        return manager.getResource(name + ".mustache") != null;
     }
 
-    protected Entry<Mustache, Resource> compileTemplate(String name) {
+    @Override
+    public ReloadingMustacheTemplate compile(String name) {
+        if (!name.endsWith(".mustache")) name = name + ".mustache";
+        return new ReloadingMustacheTemplate(this, name);
+    }
 
-        resourceLocal.remove();
+    @Override
+    public CompiledTemplate compileInline(String template) {
+        final StringReader reader = new StringReader(template);
+        final Mustache mustache = factory.compile(reader, null);
+        return new CompiledTemplate() {
+
+            @Override
+            public void execute(Writer output, Object scope) {
+                mustache.execute(output, scope);
+            }
+
+        };
+    }
+
+    /* ====================================================================== */
+
+    protected Entry<Mustache, Resources> compileTemplate(String name) {
+
+        currentResources.remove();
         final Mustache mustache = factory.compile(name);
-        Resource resource = resourceLocal.get();
-        resourceLocal.remove();
+        Resources resources = currentResources.get();
+        currentResources.remove();
 
         /* If the template was cached, we return whatever we have */
-        if (resource == null) resource = resources.get(name);
-
-        /* Check if we compiled or returned a cached template */
-        if (resource == null) {
-            throw new MustacheException("No resources associated with \"" + name + "\"");
+        if (resources == null) {
+            resources = cachedResources.get(name);
         } else {
-            resources.put(name, resource); // Remember the resource
-            return new SimpleImmutableEntry<>(mustache, resource);
+            cachedResources.put(name, resources); // Remember the resource
         }
+
+        /* If we got something, remember the resources associated with this */
+        if (resources != null) return new SimpleImmutableEntry<>(mustache, resources);
+
+        /* No resources (read or cached)... Fail */
+        throw new MustacheException("No resources associated with \"" + name + "\"");
     }
 
 
@@ -92,11 +122,12 @@ public class ReloadingMustacheFactory {
         public Reader getReader(String resourceName) {
             log.debug("Reading resource \"%s\"", resourceName);
             final Resource resource = manager.getResource(resourceName);
-            final Resource current = resourceLocal.get();
+            if (resource == null) throw new MustacheException("Mustache Resource \"" + resourceName + "\" not found");
+            final Resources current = currentResources.get();
             if (current == null) {
-                resourceLocal.set(resource);
+                currentResources.set(new Resources(resource));
             } else {
-                current.addSubResource(resource);
+                current.with(resource);
             }
             return resource.read();
         }
@@ -112,17 +143,17 @@ public class ReloadingMustacheFactory {
                     if (cache.getIfPresent(key) == null) return cache;
 
                     /* Get our resource, if null invalidate and return */
-                    final Resource resource = resources.get(key);
-                    if (resource == null) {
+                    final Resources resources = cachedResources.get(key);
+                    if (resources == null) {
                         log.debug("Cached template for unknown resource \"%s\"", key);
                         cache.invalidate(key);
                         return cache;
                     }
 
                     /* Check each resource */
-                    if (resource.hasChanged()) {
+                    if (resources.hasChanged()) {
                         log.debug("A resource associated with \"%s\" was modified", key);
-                        resources.remove(key);
+                        cachedResources.remove(key);
                         cache.invalidate(key);
                         return cache;
                     }

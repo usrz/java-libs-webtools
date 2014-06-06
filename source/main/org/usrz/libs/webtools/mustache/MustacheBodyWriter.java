@@ -31,12 +31,13 @@ import javax.inject.Singleton;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
+
+import org.usrz.libs.webtools.AbstractMessageBodyWriter;
 
 @Provider
 @Singleton
-public class MustacheBodyWriter implements MessageBodyWriter<Object> {
+public class MustacheBodyWriter extends AbstractMessageBodyWriter<Object> {
 
     private static final String UTF8_NAME = UTF8.name();
     private final ReloadingMustacheFactory factory;
@@ -44,11 +45,6 @@ public class MustacheBodyWriter implements MessageBodyWriter<Object> {
     @Inject
     public MustacheBodyWriter(ReloadingMustacheFactory factory) {
         this.factory = factory;
-    }
-
-    @Override @Deprecated
-    public long getSize(Object object, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return -1;
     }
 
     @Override

@@ -15,44 +15,20 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.mustache;
 
-import static org.usrz.libs.utils.Check.notNull;
-
 import java.io.StringWriter;
-import java.io.Writer;
-import java.util.Map.Entry;
 
-import org.usrz.libs.webtools.resources.Resource;
+public interface TemplateFactory {
 
-import com.github.mustachejava.Mustache;
-
-public class ReloadingMustache {
-
-    private final ReloadingMustacheFactory factory;
-    private final String name;
-    private Mustache mustache;
-    private Resource resource;
-
-    protected ReloadingMustache(ReloadingMustacheFactory factory, String name) {
-        this.factory = notNull(factory, "Null factory");
-        this.name = notNull(name, "Null resource name");
-        compile();
-    }
-
-    public String execute(Object scope) {
+    default String execute(String template, Object scope) {
         final StringWriter writer = new StringWriter();
-        this.execute(writer, scope);
-        writer.flush();
+        compileInline(template).execute(writer, scope);
         return writer.toString();
     }
 
-    public void execute(Writer output, Object scope) {
-        if (resource.hasChanged()) compile();
-        mustache.execute(output, scope);
-    }
+    public CompiledTemplate compileInline(String template);
 
-    private void compile() {
-        final Entry<Mustache, Resource> compiled = factory.compileTemplate(name);
-        mustache = compiled.getKey();
-        resource = compiled.getValue();
-    }
+    public CompiledTemplate compile(String name);
+
+    public boolean canCompile(String name);
+
 }
