@@ -15,97 +15,102 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.resources;
 
-import static org.usrz.libs.utils.Check.notNull;
-
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.charset.Charset;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.usrz.libs.logging.Log;
 import org.usrz.libs.utils.Check;
 
 public final class Resource {
 
-    private final Set<Resource> subResources = new HashSet<>();
-    private final Log log = new Log();
     private final Charset charset;
     private final File file;
 
-    private long lastModified = -1;
+    private long lastAccessedAt = -1;
 
-    protected Resource(File file, Charset charset) {
+    Resource(File file, Charset charset) {
         this.charset = Check.notNull(charset, "Null charset");
         this.file = Check.notNull(file, "Null file");
     }
 
-    public String readString() {
-        final Reader reader = read();
-        try {
-            final StringWriter writer = new StringWriter();
-            final char[] buffer = new char[65536];
-            int read = -1;
-            while ((read = reader.read(buffer)) >= 0)
-                writer.write(buffer, 0, read);
-            reader.close();
-            writer.close();
-            return writer.toString();
-
-        } catch (IOException exception) {
-            lastModified = -1;
-            throw new ResourceException("I/O error reading \"" + file + "\"", exception);
-        }
-    }
+    /* ====================================================================== */
 
     public Reader read() {
+        return new BufferedReader(new InputStreamReader(stream(), charset));
+    }
+
+    public <W extends Writer> W read(W writer) {
         try {
-            final FileInputStream input = new FileInputStream(file);
-            final Reader reader = new InputStreamReader(input, charset);
-            log.debug("Reading file \"%s\"", file);
-            lastModified = file.lastModified();
-            return new BufferedReader(reader);
+            final Reader reader = read();
+            final char[] buffer = new char[4096];
+            int read;
+            while ((read = reader.read(buffer)) >= 0)
+                if (read > 0) writer.write(buffer, 0, read);
+            reader.close();
+            writer.flush();
+            return writer;
+
         } catch (IOException exception) {
-            lastModified = -1;
             throw new ResourceException("I/O error reading \"" + file + "\"", exception);
         }
     }
 
-    public long lastModified() {
-        final AtomicLong modified = new AtomicLong(lastModified < 0 ? file.lastModified() : lastModified);
-        subResources.forEach((resource) -> {
-            final long current = resource.lastModified();
-            modified.getAndUpdate((previous) -> current > previous ? current : previous);
-        });
-        return modified.get();
+    public String readString() {
+        return read(new StringWriter()).toString();
+    }
+
+    public InputStream stream() {
+        try {
+            final FileInputStream input = new FileInputStream(file);
+            lastAccessedAt = file.lastModified();
+            return new BufferedInputStream(input);
+        } catch (IOException exception) {
+            throw new ResourceException("I/O error reading \"" + file + "\"", exception);
+        }
+    }
+
+    public <O extends OutputStream> O stream(O output) {
+        try {
+            final InputStream input = stream();
+            final byte[] buffer = new byte[4096];
+            int read;
+            while ((read = input.read(buffer)) >= 0)
+                if (read > 0) output.write(buffer, 0, read);
+            input.close();
+            output.flush();
+            return output;
+        } catch (IOException exception) {
+            throw new ResourceException("I/O error reading \"" + file + "\"", exception);
+        }
+    }
+
+    public byte[] readBytes() {
+        return stream(new ByteArrayOutputStream()).toByteArray();
+    }
+
+    /* ====================================================================== */
+
+    public long lastModifiedAt() {
+        return file.lastModified();
     }
 
     public boolean hasChanged() {
-        if (lastModified < 0) return true;
-        if (lastModified != file.lastModified()) {
-            log.debug("File \"%s\" was modified since last read", file);
-            return true;
-        }
-        return subResources.stream().anyMatch((r) -> r.hasChanged());
-    }
-
-    public void addSubResource(Resource resource) {
-        subResources.add(notNull(resource, "Null sub-resource"));
+        System.err.println("LA => " + lastAccessedAt + "\nLM => " + lastModifiedAt());
+        return lastAccessedAt != lastModifiedAt();
     }
 
     public File getFile() {
         return file;
-    }
-
-    public Set<Resource> getSubResources() {
-        return Collections.unmodifiableSet(subResources);
     }
 
     /* ====================================================================== */
