@@ -43,11 +43,10 @@ public class ReloadingMustacheFactory implements TemplateFactory {
     private final Log log = new Log();
 
     private final ResourceManager manager;
-    private final Factory factory;
+    private final Factory factory = new Factory();
 
     public ReloadingMustacheFactory(File root) {
         manager = new ResourceManager(root);
-        factory = new Factory(root);
     }
 
     /* ====================================================================== */
@@ -114,8 +113,8 @@ public class ReloadingMustacheFactory implements TemplateFactory {
 
     private final class Factory extends DefaultMustacheFactory {
 
-        private Factory(File root) {
-            super(root);
+        private Factory() {
+            /* Nothing to do... */
         }
 
         @Override
