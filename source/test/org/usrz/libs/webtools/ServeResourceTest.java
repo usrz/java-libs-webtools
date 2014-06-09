@@ -25,7 +25,6 @@ import org.testng.annotations.Test;
 import org.usrz.libs.configurations.Configurations;
 import org.usrz.libs.configurations.ConfigurationsBuilder;
 import org.usrz.libs.httpd.ServerStarter;
-import org.usrz.libs.logging.Log;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
 import org.usrz.libs.testing.NET;
@@ -33,7 +32,6 @@ import org.usrz.libs.webtools.resources.ServeResource;
 
 public class ServeResourceTest extends AbstractTest {
 
-    private static final Log log = new Log();
     private ServerStarter starter;
     private File root;
     private int port;
