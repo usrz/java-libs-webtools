@@ -40,7 +40,7 @@ implements ExceptionMapper<T> {
     }
 
     @Override
-    public Response toResponse(Throwable exception) {
+    public Response toResponse(T exception) {
 
         final ExceptionWrapper wrapper;
 
