@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.templates;
 
 import static java.util.Collections.singletonMap;
 import static org.usrz.libs.utils.Charsets.UTF8;
@@ -27,8 +27,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
-import org.usrz.libs.webtools.mustache.ReloadingMustacheTemplate;
-import org.usrz.libs.webtools.mustache.ReloadingMustacheFactory;
+import org.usrz.libs.webtools.templates.ReloadingMustacheFactory;
+import org.usrz.libs.webtools.templates.ReloadingMustacheTemplate;
 
 public class MustacheTest extends AbstractTest {
 

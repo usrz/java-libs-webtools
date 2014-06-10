@@ -33,8 +33,8 @@ import org.usrz.libs.webtools.exceptions.HtmlExceptionBodyWriter;
 import org.usrz.libs.webtools.exceptions.JsonExceptionBodyWriter;
 import org.usrz.libs.webtools.exceptions.TemplateExceptionBodyWriter;
 import org.usrz.libs.webtools.exceptions.TemplatedException;
-import org.usrz.libs.webtools.mustache.ReloadingMustacheFactory;
-import org.usrz.libs.webtools.mustache.TemplateFactory;
+import org.usrz.libs.webtools.templates.ReloadingMustacheFactory;
+import org.usrz.libs.webtools.templates.TemplateFactory;
 
 public class TemplatedExceptionTest extends TestWithServer {
 

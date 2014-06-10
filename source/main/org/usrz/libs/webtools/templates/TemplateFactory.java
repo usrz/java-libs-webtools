@@ -13,20 +13,22 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.mustache;
+package org.usrz.libs.webtools.templates;
 
 import java.io.StringWriter;
-import java.io.Writer;
 
-public interface CompiledTemplate {
+public interface TemplateFactory {
 
-    default String execute(Object scope) {
+    default String execute(String template, Object scope) {
         final StringWriter writer = new StringWriter();
-        this.execute(writer, scope);
-        writer.flush();
+        compileInline(template).execute(writer, scope);
         return writer.toString();
     }
 
-    public void execute(Writer output, Object scope);
+    public CompiledTemplate compileInline(String template);
+
+    public CompiledTemplate compile(String name);
+
+    public boolean canCompile(String name);
 
 }

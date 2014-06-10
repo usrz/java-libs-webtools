@@ -13,22 +13,39 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.mustache;
+package org.usrz.libs.webtools.templates;
 
-import java.io.StringWriter;
+import static org.usrz.libs.utils.Check.notNull;
 
-public interface TemplateFactory {
+import java.io.Writer;
+import java.util.Map.Entry;
 
-    default String execute(String template, Object scope) {
-        final StringWriter writer = new StringWriter();
-        compileInline(template).execute(writer, scope);
-        return writer.toString();
+import org.usrz.libs.webtools.resources.Resources;
+
+import com.github.mustachejava.Mustache;
+
+public class ReloadingMustacheTemplate implements CompiledTemplate {
+
+    private final ReloadingMustacheFactory factory;
+    private final String name;
+    private Mustache mustache;
+    private Resources resources;
+
+    protected ReloadingMustacheTemplate(ReloadingMustacheFactory factory, String name) {
+        this.factory = notNull(factory, "Null factory");
+        this.name = notNull(name, "Null resource name");
+        compile();
     }
 
-    public CompiledTemplate compileInline(String template);
+    @Override
+    public void execute(Writer output, Object scope) {
+        if (resources.hasChanged()) compile();
+        mustache.execute(output, scope);
+    }
 
-    public CompiledTemplate compile(String name);
-
-    public boolean canCompile(String name);
-
+    private void compile() {
+        final Entry<Mustache, Resources> compiled = factory.compileTemplate(name);
+        mustache = compiled.getKey();
+        resources = compiled.getValue();
+    }
 }

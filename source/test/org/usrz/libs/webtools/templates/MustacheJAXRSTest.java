@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.templates;
 
 import java.io.File;
 import java.net.HttpURLConnection;
@@ -33,10 +33,10 @@ import org.usrz.libs.logging.Log;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
 import org.usrz.libs.testing.NET;
-import org.usrz.libs.webtools.mustache.MustacheBodyWriter;
-import org.usrz.libs.webtools.mustache.ReloadingMustacheFactory;
-import org.usrz.libs.webtools.mustache.Template;
-import org.usrz.libs.webtools.mustache.View;
+import org.usrz.libs.webtools.templates.MustacheBodyWriter;
+import org.usrz.libs.webtools.templates.ReloadingMustacheFactory;
+import org.usrz.libs.webtools.templates.Template;
+import org.usrz.libs.webtools.templates.View;
 
 
 public class MustacheJAXRSTest extends AbstractTest {

@@ -24,8 +24,8 @@ import org.usrz.libs.configurations.ConfigurationsBuilder;
 import org.usrz.libs.httpd.ServerStarter;
 import org.usrz.libs.testing.IO;
 import org.usrz.libs.testing.NET;
-import org.usrz.libs.webtools.mustache.ReloadingMustacheFactory;
-import org.usrz.libs.webtools.mustache.TemplateFactory;
+import org.usrz.libs.webtools.templates.ReloadingMustacheFactory;
+import org.usrz.libs.webtools.templates.TemplateFactory;
 
 public class TemplateExceptionBodyWriterTest extends TestWithServer {
 

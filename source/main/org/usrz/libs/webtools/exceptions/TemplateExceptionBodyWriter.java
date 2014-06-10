@@ -35,8 +35,8 @@ import javax.ws.rs.ext.Provider;
 
 import org.usrz.libs.logging.Log;
 import org.usrz.libs.webtools.AbstractMessageBodyWriter;
-import org.usrz.libs.webtools.mustache.CompiledTemplate;
-import org.usrz.libs.webtools.mustache.TemplateFactory;
+import org.usrz.libs.webtools.templates.CompiledTemplate;
+import org.usrz.libs.webtools.templates.TemplateFactory;
 
 @Provider
 @Singleton
