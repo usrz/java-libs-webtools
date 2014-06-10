@@ -10,6 +10,7 @@
   </appender>
 
   <logger name="org.usrz.libs.webtools" level="debug" />
+  <logger name="org.usrz.libs.webtools.exceptions.GeneralExceptionMapper" level="off" />
 
   <root level="info">
     <appender-ref ref="stderr" />
