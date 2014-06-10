@@ -40,15 +40,6 @@ public class TemplatedException extends RuntimeException {
         this.partials = partials;
     }
 
-//    protected TemplatedException renderPartials(TemplateFactory templates) {
-//        final HashMap<String, String> rendered = new HashMap<>();
-//        partials.forEach((key, partial) -> rendered.put(key, templates.execute(partial, scope)));
-//        System.err.println("RENDERED " + rendered);
-//        scope.putAll(rendered);
-//        System.err.println("SCOPE " + scope);
-//        return this;
-//    }
-
     public StatusType getStatus() {
         return status;
     }

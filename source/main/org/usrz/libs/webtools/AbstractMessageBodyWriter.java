@@ -107,10 +107,6 @@ implements MessageBodyWriter<T> {
                         OutputStream entityStream)
     throws IOException, WebApplicationException {
 
-        System.err.println("MEDIATYPE-->" + httpHeaders.get(CONTENT_TYPE));
-        System.err.println("         -->" + mediaType);
-        System.err.println("         -->" + this.mediaType);
-
         /* Content type if we have it */
         final MediaType actualMediaType;
         if (httpHeaders.containsKey(CONTENT_TYPE)) {
