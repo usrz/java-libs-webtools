@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.exceptions;
 
 import static org.usrz.libs.utils.Charsets.UTF8;
 
@@ -22,53 +22,29 @@ import java.net.URL;
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.usrz.libs.configurations.Configurations;
-import org.usrz.libs.configurations.ConfigurationsBuilder;
 import org.usrz.libs.httpd.ServerStarter;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
-import org.usrz.libs.testing.NET;
-import org.usrz.libs.webtools.exceptions.GeneralExceptionMapper;
-import org.usrz.libs.webtools.exceptions.HtmlExceptionBodyWriter;
-import org.usrz.libs.webtools.exceptions.JsonExceptionBodyWriter;
 
-public class TestExceptionsAbstract extends AbstractTest {
+public abstract class TestWithServer extends AbstractTest {
 
-    // ae6a9736-845a-4062-afeb-b20669d54e2a
-    public static final String UUID_PATTERN = "\\p{XDigit}{8}-\\p{XDigit}{4}-\\p{XDigit}{4}-\\p{XDigit}{4}-\\p{XDigit}{12}";
+    protected static final String UUID_PATTERN = "\\p{XDigit}{8}-\\p{XDigit}{4}-\\p{XDigit}{4}-\\p{XDigit}{4}-\\p{XDigit}{12}";
 
     protected ServerStarter starter;
     protected int port;
 
     @BeforeClass(alwaysRun=true)
-    protected final void before()
-    throws Exception {
-        port = NET.serverPort();
-        final Configurations serverConfig = new ConfigurationsBuilder()
-                    .put("server.listener.port", port)
-                    .put("server.listener.host", "127.0.0.1")
-                    .put("server.listener.secure", false)
-                    .build();
-
-        starter = new ServerStarter().start((builder) -> {
-            builder.configure(serverConfig.strip("server"));
-            builder.serveApp("/fail", (config) -> {
-                config.register(FailResource.class);
-                config.register(GeneralExceptionMapper.class);
-                config.register(HtmlExceptionBodyWriter.class);
-                config.register(JsonExceptionBodyWriter.class);
-            });
-        });
-
-        Thread.sleep(1000);
-    }
+    public abstract void before()
+    throws Exception;
 
     @AfterClass(alwaysRun=true)
-    protected final void after() {
+    public final void after() {
         if (starter != null) starter.stop();
     }
 
-    protected final void assertResponse(String path, String accept, String acceptableType, String acceptablePattern)
+    /* ====================================================================== */
+
+    protected void assertResponse(String path, String accept, int acceptableStatus, String acceptableType, String acceptablePattern)
     throws Exception {
         URL url = new URL("http://127.0.0.1:" + port + path);
         log.info("Requesting \"%s\" with Accept \"%s\"", url, accept);
@@ -85,7 +61,7 @@ public class TestExceptionsAbstract extends AbstractTest {
         final String actual = new String(IO.read(connection.getErrorStream()), UTF8).trim();
         System.out.println(">>> " + actual);
 
-        assertEquals(connection.getResponseCode(), 500, "Wrong status code");
+        assertEquals(connection.getResponseCode(), acceptableStatus, "Wrong status code");
         assertEquals(connection.getHeaderField("Content-Type"), acceptableType, "Wrong Content-Type header");
 
         assertTrue(actual.matches(acceptablePattern), "\nWrong response: " + actual + "\n       pattern: " + acceptablePattern + "\n");

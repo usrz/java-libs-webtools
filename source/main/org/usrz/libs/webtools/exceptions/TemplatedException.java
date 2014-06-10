@@ -13,38 +13,52 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.mustache;
+package org.usrz.libs.webtools.exceptions;
 
-import static javax.ws.rs.core.Response.serverError;
+import static javax.ws.rs.core.Response.Status.fromStatusCode;
+import static org.usrz.libs.utils.Check.notNull;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.Response.StatusType;
 
-public class TemplatedException extends WebApplicationException {
+public class TemplatedException extends RuntimeException {
 
     private final Map<String, String> partials;
     private final Map<String, Object> scope;
+    private final StatusType status;
 
     private TemplatedException(String message,
-                               Response response,
+                               StatusType status,
                                Map<String, String> partials,
                                Map<String, Object> scope) {
-        super(message, response);
+        super(message);
+        this.status = status;
         this.scope = scope;
         this.partials = partials;
     }
 
-    protected TemplatedException renderPartials(TemplateFactory templates) {
-        final HashMap<String, String> rendered = new HashMap<>();
-        partials.forEach((key, partial) -> rendered.put(key, templates.execute(partial, scope)));
-        scope.putAll(rendered);
-        return this;
+//    protected TemplatedException renderPartials(TemplateFactory templates) {
+//        final HashMap<String, String> rendered = new HashMap<>();
+//        partials.forEach((key, partial) -> rendered.put(key, templates.execute(partial, scope)));
+//        System.err.println("RENDERED " + rendered);
+//        scope.putAll(rendered);
+//        System.err.println("SCOPE " + scope);
+//        return this;
+//    }
+
+    public StatusType getStatus() {
+        return status;
+    }
+
+    public Map<String, Object> getScope() {
+        return scope;
+    }
+
+    public Map<String, String> getPartials() {
+        return partials;
     }
 
     @Override
@@ -53,14 +67,13 @@ public class TemplatedException extends WebApplicationException {
         return this;
     }
 
-
     /* ====================================================================== */
 
     public static class Builder {
 
         private final Map<String, String> partials = new HashMap<>();
         private final Map<String, Object> scope = new HashMap<>();
-        private final ResponseBuilder response = serverError();
+        private StatusType status = Status.INTERNAL_SERVER_ERROR;
         private Throwable cause;
         private String message;
 
@@ -85,27 +98,26 @@ public class TemplatedException extends WebApplicationException {
         }
 
         public Builder status(int status) {
-            response.status(status);
-            return this;
+            return status(notNull(fromStatusCode(status), "Invalid status " + status));
         }
 
         public Builder status(Status status) {
-            response.status(status);
+            this.status = notNull(status, "Null status");
             return this;
         }
 
         public Builder status(StatusType status) {
-            response.status(status);
+            this.status = notNull(status, "Null status");
             return this;
         }
 
         public Builder partial(String key, String template) {
-            partials.put(key, template);
+            partials.put(notNull(key, "Null key"), notNull(template, "Null template"));
             return this;
         }
 
         public Builder put(String key, Object value) {
-            scope.put(key, value);
+            scope.put(notNull(key, "Null key"), notNull(value, "Null value"));
             return this;
         }
 
@@ -116,7 +128,9 @@ public class TemplatedException extends WebApplicationException {
 
         public TemplatedException build() {
             final TemplatedException exception = new TemplatedException(message,
-                                             response.build(), partials, scope);
+                                                                        status,
+                                                                        partials,
+                                                                        scope);
             if (cause != null) exception.initCause(cause);
             return exception;
         }

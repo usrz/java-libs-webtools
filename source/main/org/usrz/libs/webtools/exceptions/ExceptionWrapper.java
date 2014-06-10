@@ -17,6 +17,8 @@ package org.usrz.libs.webtools.exceptions;
 
 import static org.usrz.libs.utils.Check.notNull;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.ws.rs.core.Response.Status;
@@ -26,23 +28,21 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({"status", "status_reason", "reference", "message", "exception"})
+@JsonPropertyOrder({"status_code", "status_reason", "reference", "message", "exception"})
 public final class ExceptionWrapper {
 
     private final UUID uuid;
     private final StatusType status;
     private final String message;
     private final Throwable exception;
-    private final Object entity;
 
     protected ExceptionWrapper(Throwable exception) {
-        this(Status.INTERNAL_SERVER_ERROR, exception, null);
+        this(Status.INTERNAL_SERVER_ERROR, exception);
     }
 
-    protected ExceptionWrapper(StatusType status, Throwable exception, Object entity) {
+    protected ExceptionWrapper(StatusType status, Throwable exception) {
         this.status = notNull(status, "Null status");
         this.exception = exception;
-        this.entity = entity;
 
         /* Message, either specified, or from exception, or from status */
         message = exception != null ?
@@ -58,7 +58,7 @@ public final class ExceptionWrapper {
         return status;
     }
 
-    @JsonProperty("status")
+    @JsonProperty("status_code")
     public int getStatusCode() {
         return status.getStatusCode();
     }
@@ -88,9 +88,13 @@ public final class ExceptionWrapper {
         return exception == null ? null : exception.getClass();
     }
 
-    @JsonIgnore
-    public Object getEntity() {
-        return entity;
+    public Map<String, Object> toMap() {
+        final Map<String, Object> map = new HashMap<>();
+        map.put("status_code", getStatusCode());
+        map.put("status_reason", getStatusReason());
+        map.put("message", getMessage());
+        map.put("reference", getReference());
+        map.put("exception", getExceptionType());
+        return map;
     }
-
 }

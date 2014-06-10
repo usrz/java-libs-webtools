@@ -36,7 +36,6 @@ implements ExceptionMapper<T> {
     protected AbstractExceptionMapper(UriInfo info, HttpHeaders headers) {
         this.headers = notNull(headers, "Null headers");
         this.info = notNull(info, "Null UriInfo");
-        System.err.println("Constructed " + this.getClass().getName());
     }
 
     @Override
@@ -47,16 +46,18 @@ implements ExceptionMapper<T> {
         if (exception == null) {
             wrapper = new ExceptionWrapper(new IllegalArgumentException("No exception to handle"));
 
+        } else if (exception instanceof TemplatedException) {
+
+            wrapper = new ExceptionWrapper(((TemplatedException) exception).getStatus(), exception);
+
         } else if (exception instanceof WebApplicationException) {
 
             /* Web application exceptions are complicated */
             final Response response = ((WebApplicationException) exception).getResponse();
             final Throwable cause = exception.getCause();
 
-            System.err.println("MEDIA TYPE IS " + response.getMediaType());
             /* Copy entity and status, no matter what */
             final StatusType status = response.getStatusInfo();
-            final Object entity = response.getEntity();
 
             switch (status.getFamily()) {
                 case INFORMATIONAL: // 1xx
@@ -65,7 +66,7 @@ implements ExceptionMapper<T> {
                 case CLIENT_ERROR:  // 4xx
 
                     /* "Soft" exception? Only log the real cause if any */
-                    wrapper = new ExceptionWrapper(status, cause, entity);
+                    wrapper = new ExceptionWrapper(status, cause);
                     break;
 
                 case SERVER_ERROR:  // 5xx
@@ -74,8 +75,7 @@ implements ExceptionMapper<T> {
 
                     /* "Hard" exception? Either use the real cause or the WAE */
                     wrapper = new ExceptionWrapper(status,  // status from response
-                                                   cause != null ? cause : exception,
-                                                   entity); // entity from response
+                                                   cause != null ? cause : exception);
                     break;
 
             }

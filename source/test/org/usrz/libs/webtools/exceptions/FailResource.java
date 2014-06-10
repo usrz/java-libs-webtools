@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.exceptions;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_HTML;
@@ -24,7 +24,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
-import org.usrz.libs.webtools.mustache.TemplatedException;
+import org.usrz.libs.webtools.exceptions.TemplatedException;
 
 @Path("/")
 public class FailResource {

@@ -55,12 +55,13 @@ implements MessageBodyWriter<T> {
 
     protected AbstractMessageBodyWriter(Class<T> type, MediaType mediaType) {
         this.type = type;
-        this.mediaType = mediaType;
 
         if (mediaType != null) {
-          final String charset = mediaType.getParameters().get(CHARSET_PARAMETER);
-          this.charset = charset == null ? UTF8 : Charset.forName(charset);
+            final String charset = mediaType.getParameters().get(CHARSET_PARAMETER);
+            this.charset = charset == null ? UTF8 : Charset.forName(charset);
+            this.mediaType = mediaType.withCharset(this.charset.name());
         } else {
+            this.mediaType = null;
             this.charset = Charsets.UTF8;
         }
     }
@@ -106,10 +107,31 @@ implements MessageBodyWriter<T> {
                         OutputStream entityStream)
     throws IOException, WebApplicationException {
 
-        /* Content type if we have it */
-        if ((mediaType != null) && (!httpHeaders.containsKey(CONTENT_TYPE)))
-            httpHeaders.putSingle(CONTENT_TYPE, mediaType);
+        System.err.println("MEDIATYPE-->" + httpHeaders.get(CONTENT_TYPE));
+        System.err.println("         -->" + mediaType);
+        System.err.println("         -->" + this.mediaType);
 
+        /* Content type if we have it */
+        final MediaType actualMediaType;
+        if (httpHeaders.containsKey(CONTENT_TYPE)) {
+            actualMediaType = MediaType.valueOf(httpHeaders.getFirst(CONTENT_TYPE).toString());
+        } else if (mediaType != null) {
+            actualMediaType = mediaType;
+        } else {
+            actualMediaType = this.mediaType;
+        }
+
+        /* If we found a mediaType, then check if we have a charset */
+        if (actualMediaType != null) {
+            final String charset = actualMediaType.getParameters().get(CHARSET_PARAMETER);
+            if (charset != null) {
+                httpHeaders.putSingle(CONTENT_TYPE, actualMediaType);
+            } else {
+                httpHeaders.putSingle(CONTENT_TYPE, actualMediaType.withCharset(this.charset.name()));
+            }
+        }
+
+        /* Write the response */
         this.writeTo(instance, entityStream);
         entityStream.flush();
     }

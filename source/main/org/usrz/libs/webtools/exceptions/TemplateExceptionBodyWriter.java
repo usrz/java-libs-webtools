@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.mustache;
+package org.usrz.libs.webtools.exceptions;
 
 import static javax.ws.rs.core.MediaType.TEXT_HTML;
 import static javax.ws.rs.core.MediaType.TEXT_HTML_TYPE;
@@ -22,6 +22,8 @@ import static org.usrz.libs.utils.Check.notNull;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -33,7 +35,8 @@ import javax.ws.rs.ext.Provider;
 
 import org.usrz.libs.logging.Log;
 import org.usrz.libs.webtools.AbstractMessageBodyWriter;
-import org.usrz.libs.webtools.exceptions.ExceptionWrapper;
+import org.usrz.libs.webtools.mustache.CompiledTemplate;
+import org.usrz.libs.webtools.mustache.TemplateFactory;
 
 @Provider
 @Singleton
@@ -81,23 +84,37 @@ public class TemplateExceptionBodyWriter extends AbstractMessageBodyWriter<Excep
     @Override
     protected void writeTo(ExceptionWrapper wrapper, Writer entityWriter)
     throws IOException, WebApplicationException {
-        findTemplate(wrapper.getStatus()).execute(entityWriter, wrapper);
+
+
+        final Map<String, Object> context = new HashMap<>();
+        final Throwable throwable = wrapper.getException();
+        if (throwable instanceof TemplatedException) {
+            final TemplatedException exception = (TemplatedException) throwable;
+            final Map<String, Object> scope = exception.getScope();
+
+            exception.getPartials().forEach((key, template) ->
+                context.put(key, templates.compileInline(template).execute(scope)));
+            context.putAll(scope);
+        }
+
+        context.putAll(wrapper.toMap());
+        findTemplate(wrapper.getStatus()).execute(entityWriter, context);
     }
 
     private final String HTML = "<!DOCTYPE html>"
                               + "<html>"
                               + "<head>"
-                              + "<title>Error {{statusCode}}: {{statusReason}}</title>"
+                              + "<title>Error {{status_code}}: {{status_reason}}</title>"
                               + "</head>"
                               + "<body>"
-                              + "<h1>Error {{statusCode}}: {{statusReason}}</h1>"
+                              + "<h1>Error {{status_code}}: {{status_reason}}</h1>"
                               + "<dl>"
                               + "{{#message}}<dt>Message:</dt>"
                               + "<dd>{{message}}</dd>{{/message}}"
                               + "{{#reference}}<dt>Reference:</dt>"
                               + "<dd>{{reference}}</dd>{{/reference}}"
-                              + "{{#exceptionType}}<dt>Exception:</dt>"
-                              + "<dd>{{exceptionType}}</dd>{{/exceptionType}}"
+                              + "{{#exception}}<dt>Exception:</dt>"
+                              + "<dd>{{exception}}</dd>{{/exception}}"
                               + "</dl>"
                               + "</body>"
                               + "</html>";

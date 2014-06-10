@@ -105,7 +105,6 @@ public final class Resource {
     }
 
     public boolean hasChanged() {
-        System.err.println("LA => " + lastAccessedAt + "\nLM => " + lastModifiedAt());
         return lastAccessedAt != lastModifiedAt();
     }
 
