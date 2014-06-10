@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools;
+package org.usrz.libs.webtools.resources;
 
 import static org.usrz.libs.utils.Charsets.UTF8;
 import static org.usrz.libs.utils.Check.notNull;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
@@ -42,6 +39,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.usrz.libs.configurations.Configurations;
 import org.usrz.libs.logging.Log;
+import org.usrz.libs.webtools.MediaTypes;
 import org.usrz.libs.webtools.lesscss.LessCSS;
 import org.usrz.libs.webtools.uglifyjs.UglifyJS;
 
@@ -80,9 +78,9 @@ public class ServeResource {
 
     private final LessCSS less = new LessCSS();
     private final UglifyJS uglify = new UglifyJS();
-    private final ConcurrentMap<File, Entry> cache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Resource, Entry> cache = new ConcurrentHashMap<>();
 
-    private final File root;
+    private final ResourceManager manager;
     private final boolean minify;
     private final Charset charset;
     private final String charsetName;
@@ -96,10 +94,8 @@ public class ServeResource {
     @Inject
     public ServeResource(Configurations configurations)
     throws IOException {
-        root = configurations.requireFile("root_path").getCanonicalFile();
+        manager = new ResourceManager(configurations.requireFile("root_path"));
 
-        if (! root.isDirectory())
-            throw new IllegalArgumentException("Invalid resource root \"" + root + "\"");
         minify = configurations.get("minify", false);
 
         cacheDuration = configurations.get("cache", Duration.ZERO);
@@ -125,31 +121,19 @@ public class ServeResource {
         if ((path == null) || (path.length() == 0)) throw new NotFoundException();
 
         /* Get our resource file, potentially a ".less" file for CSS */
-        File resourceFile = new File(root, path);
-        if (! resourceFile.isFile() && path.endsWith(".css")) {
-            resourceFile = new File(root, path.substring(0, path.length() - 4) + ".less");
-        }
-
-        /* Check if the file is in our resource directory (fake requests and whatnot) */
-        File parentFile = resourceFile.getParentFile();
-        while (parentFile != null) {
-            if (parentFile.equals(root)) break;
-            parentFile = parentFile.getParentFile();
-
+        Resource resource = manager.getResource(path);
+        if ((resource == null) && path.endsWith(".css")) {
+            path = path.substring(0, path.length() - 4) + ".less";
+            resource = manager.getResource(path);
         }
 
         /* If the root is incorrect, log this, if not found, 404 it! */
-        if ((parentFile == null) || (! root.equals(parentFile))) {
-            log.warn("Attempted to access resource outside of root \"%s\"", path);
-            throw new NotFoundException();
-        } else if (! resourceFile.isFile()) {
-            throw new NotFoundException();
-        }
+        if (resource == null) throw new NotFoundException();
+        final String fileName = resource.getFile().getName();
 
         /* Check and validated our cache */
-        final String fileName = resourceFile.getName();
-        Entry cached = cache.computeIfPresent(resourceFile, (file, entry) ->
-            file.lastModified() == entry.lastModified ? entry : null);
+        Entry cached = cache.computeIfPresent(resource,
+                (r, entry) -> entry.resource.hasChanged() ? null : entry);
 
         /* If we have no cache, we *might* want to cache something */
         if (cached == null) {
@@ -158,48 +142,47 @@ public class ServeResource {
             if ((fileName.endsWith(".css") && minify) || fileName.endsWith(".less")) {
 
                 /* Lessify CSS and cache */
-                log.debug("Lessifying resource \"%s\"", resourceFile);
-                cached = new Entry(resourceFile.lastModified(),
-                                   less.convert(load(resourceFile), minify),
+                log.debug("Lessifying resource \"%s\"", fileName);
+                cached = new Entry(resource,
+                                   less.convert(resource.readString(), minify),
                                    styleMediaType);
 
             } else if (fileName.endsWith(".js") && minify) {
 
                 /* Uglify JavaScript and cache */
-                log.debug("Uglifying resource \"%s\"", resourceFile);
-                cached = new Entry(resourceFile.lastModified(),
-                                   uglify.convert(load(resourceFile), minify, minify),
+                log.debug("Uglifying resource \"%s\"", fileName);
+                cached = new Entry(resource,
+                                   uglify.convert(resource.readString(), minify, minify),
                                    scriptMediaType);
             }
 
             /* Do we have anything to cache? */
             if (cached != null) {
-                log.debug("Caching resource \"%s\"", resourceFile);
-                cache.put(resourceFile, cached);
+                log.debug("Caching resource \"%s\"", fileName);
+                cache.put(resource, cached);
             }
         }
 
         /* Prepare our basic response from either cache or file */
         final ResponseBuilder response = Response.ok();
         if (cached != null) {
-            log.debug("Serving cached resource \"%s\"", resourceFile);
+            log.debug("Serving cached resource \"%s\"", fileName);
             response.entity(cached.contents)
-                    .lastModified(new Date(cached.lastModified))
+                    .lastModified(new Date(resource.lastModifiedAt()))
                     .type(cached.type);
 
         } else {
-            log.debug("Serving file resource \"%s\"", resourceFile);
+            log.debug("Serving file resource \"%s\"", fileName);
 
             /* If text/* or application/javascript, append encoding */
-            MediaType type = MediaTypes.get(resourceFile);
+            MediaType type = MediaTypes.get(fileName);
             if (type.getType().equals("text") || scriptMediaType.isCompatible(type)) {
                 type = type.withCharset(charsetName);
-
             }
 
             /* Our file is served! */
-            response.entity(resourceFile)
-                    .lastModified(new Date(resourceFile.lastModified()))
+            response.entity(resource.getFile())
+                    .lastModified(new Date(resource.lastModifiedAt()))
                     .type(type);
         }
 
@@ -212,28 +195,14 @@ public class ServeResource {
 
     /* ====================================================================== */
 
-    private final String load(File file)
-    throws IOException {
-        final FileInputStream input = new FileInputStream(file);
-        final ByteArrayOutputStream output = new ByteArrayOutputStream();
-        final byte[] buffer = new byte[65536];
-        int read = -1;
-        while ((read = input.read(buffer)) >= 0) output.write(buffer, 0, read);
-        input.close();
-        output.close();
-        return new String(output.toByteArray(), charset);
-    }
-
-    /* ====================================================================== */
-
     private final class Entry {
 
-        private final long lastModified;
+        private final Resource resource;
         private final String contents;
         private final MediaType type;
 
-        private Entry(long lastModified, String contents, MediaType type) {
-            this.lastModified = lastModified;
+        private Entry(Resource resource, String contents, MediaType type) {
+            this.resource = notNull(resource);
             this.contents = notNull(contents);
             this.type = notNull(type);
         }

@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import com.github.mustachejava.MustacheException;
-
 public class ResourceManager {
 
     private final Charset charset;
@@ -53,7 +51,9 @@ public class ResourceManager {
             final File canonical = file.getCanonicalFile();
 
             /* Check that we're returning a file */
-            if (!canonical.isFile()) {
+            if (!canonical.exists()) {
+                return null;
+            } else if (!canonical.isFile()) {
                 throw new ResourceException("Resource \"" + file + "\" is not a file");
             }
 
@@ -71,7 +71,7 @@ public class ResourceManager {
             return new Resource(canonical, charset);
 
         } catch (IOException exception) {
-            throw new MustacheException("I/O error accessing \"" + file + "\"");
+            throw new ResourceException("I/O error accessing \"" + file + "\"");
         }
 
     }

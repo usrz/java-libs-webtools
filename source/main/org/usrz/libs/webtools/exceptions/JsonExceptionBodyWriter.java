@@ -13,46 +13,47 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.mustache;
+package org.usrz.libs.webtools.exceptions;
 
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static org.usrz.libs.utils.Charsets.UTF8;
 import static org.usrz.libs.utils.Check.notNull;
 
-import java.io.StringWriter;
+import java.io.IOException;
 import java.io.Writer;
-import java.util.Map.Entry;
 
-import org.usrz.libs.webtools.resources.Resource;
+import javax.annotation.Priority;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.ext.Provider;
 
-import com.github.mustachejava.Mustache;
+import org.usrz.libs.webtools.AbstractMessageBodyWriter;
 
-public class ReloadingMustache {
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-    private final ReloadingMustacheFactory factory;
-    private final String name;
-    private Mustache mustache;
-    private Resource resource;
+@Provider
+@Singleton
+@Priority(1000)
+@Produces(APPLICATION_JSON)
+public class JsonExceptionBodyWriter extends AbstractMessageBodyWriter<ExceptionWrapper> {
 
-    protected ReloadingMustache(ReloadingMustacheFactory factory, String name) {
-        this.factory = notNull(factory, "Null factory");
-        this.name = notNull(name, "Null resource name");
-        compile();
+    private final ObjectMapper mapper;
+
+    @Inject
+    private JsonExceptionBodyWriter(ObjectMapper mapper) {
+        super(ExceptionWrapper.class, APPLICATION_JSON_TYPE, UTF8);
+        this.mapper = notNull(mapper, "Null object mapper");
     }
 
-    public String execute(Object scope) {
-        final StringWriter writer = new StringWriter();
-        this.execute(writer, scope);
-        writer.flush();
-        return writer.toString();
+    @Override
+    protected void writeTo(ExceptionWrapper wrapper, Writer writer)
+    throws IOException, WebApplicationException {
+        /* Write a *STRING* since no matter what, Jackson *closes* the writer */
+        writer.write(mapper.writeValueAsString(wrapper));
     }
 
-    public void execute(Writer output, Object scope) {
-        if (resource.hasChanged()) compile();
-        mustache.execute(output, scope);
-    }
 
-    private void compile() {
-        final Entry<Mustache, Resource> compiled = factory.compileTemplate(name);
-        mustache = compiled.getKey();
-        resource = compiled.getValue();
-    }
 }
