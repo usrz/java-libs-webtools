@@ -33,10 +33,6 @@ import org.usrz.libs.logging.Log;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
 import org.usrz.libs.testing.NET;
-import org.usrz.libs.webtools.templates.TemplateBodyWriter;
-import org.usrz.libs.webtools.templates.ReloadingMustacheFactory;
-import org.usrz.libs.webtools.templates.Template;
-import org.usrz.libs.webtools.templates.View;
 
 
 public class MustacheJAXRSTest extends AbstractTest {
@@ -67,8 +63,9 @@ public class MustacheJAXRSTest extends AbstractTest {
                     .build();
 
         starter = new ServerStarter().start((builder) -> {
-            builder.install((consumer) -> {
-                consumer.bind(ReloadingMustacheFactory.class).toInstance(new ReloadingMustacheFactory(directory));
+            builder.install((binder) -> {
+                binder.bind(TemplateFactory.class)
+                      .toInstance(new ReloadingMustacheFactory(directory));
             });
 
             builder.configure(serverConfig.strip("server"));
