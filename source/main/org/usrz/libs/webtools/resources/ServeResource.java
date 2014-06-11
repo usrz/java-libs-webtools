@@ -94,7 +94,10 @@ public class ServeResource {
     @Inject
     public ServeResource(Configurations configurations)
     throws IOException {
-        manager = new ResourceManager(configurations.requireFile("root_path"));
+        charset = Charset.forName(configurations.get("charset", UTF8.name()));
+        charsetName = charset.name();
+
+        manager = new ResourceManager(configurations.requireFile("root_path"), charset);
 
         minify = configurations.get("minify", false);
 
@@ -103,8 +106,6 @@ public class ServeResource {
         cacheControl.setMaxAge((int) cacheDuration.getSeconds());
         cacheControl.setNoCache(Duration.ZERO.equals(cacheDuration));
 
-        charset = Charset.forName(configurations.get("charset", UTF8.name()));
-        charsetName = charset.name();
         styleMediaType = new MediaType("text", "css").withCharset(charsetName);
         scriptMediaType = new MediaType("application", "javascript").withCharset(charsetName);
     }
