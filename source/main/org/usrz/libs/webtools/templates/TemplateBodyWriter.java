@@ -37,13 +37,13 @@ import org.usrz.libs.webtools.AbstractMessageBodyWriter;
 
 @Provider
 @Singleton
-public class MustacheBodyWriter extends AbstractMessageBodyWriter<Object> {
+public class TemplateBodyWriter extends AbstractMessageBodyWriter<Object> {
 
     private static final String UTF8_NAME = UTF8.name();
-    private final ReloadingMustacheFactory factory;
+    private final TemplateFactory factory;
 
     @Inject
-    public MustacheBodyWriter(ReloadingMustacheFactory factory) {
+    public TemplateBodyWriter(TemplateFactory factory) {
         this.factory = factory;
     }
 

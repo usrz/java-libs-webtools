@@ -19,12 +19,14 @@ import java.io.File;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import org.usrz.libs.logging.Log;
+import org.usrz.libs.utils.Check;
 import org.usrz.libs.webtools.resources.Resource;
 import org.usrz.libs.webtools.resources.ResourceManager;
 import org.usrz.libs.webtools.resources.Resources;
@@ -34,7 +36,6 @@ import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheException;
 import com.google.common.cache.ForwardingLoadingCache;
 import com.google.common.cache.LoadingCache;
-import com.google.inject.Binder;
 
 public class ReloadingMustacheFactory implements TemplateFactory {
 
@@ -45,15 +46,18 @@ public class ReloadingMustacheFactory implements TemplateFactory {
     private final ResourceManager manager;
     private final Factory factory = new Factory();
 
-    public ReloadingMustacheFactory(File root) {
-        manager = new ResourceManager(root);
-    }
-
     /* ====================================================================== */
 
-    public static final void bind(Binder binder, File root) {
-        binder.bind(TemplateFactory.class)
-              .toInstance(new ReloadingMustacheFactory(root));
+    public ReloadingMustacheFactory(File root) {
+        this(new ResourceManager(root));
+    }
+
+    public ReloadingMustacheFactory(File root, Charset charset) {
+        this(new ResourceManager(root, charset));
+    }
+
+    public ReloadingMustacheFactory(ResourceManager manager) {
+        this.manager = Check.notNull(manager, "Null resource manager");
     }
 
     /* ====================================================================== */
