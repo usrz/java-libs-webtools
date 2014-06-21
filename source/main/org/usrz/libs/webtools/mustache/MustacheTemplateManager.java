@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.mustache;
+
+import static org.usrz.libs.utils.Check.notNull;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.Reader;
-import java.io.StringReader;
-import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
@@ -26,10 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import org.usrz.libs.logging.Log;
-import org.usrz.libs.utils.Check;
 import org.usrz.libs.webtools.resources.Resource;
 import org.usrz.libs.webtools.resources.ResourceManager;
 import org.usrz.libs.webtools.resources.Resources;
+import org.usrz.libs.webtools.templates.Template;
+import org.usrz.libs.webtools.templates.TemplateException;
+import org.usrz.libs.webtools.templates.TemplateManager;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
@@ -37,95 +40,90 @@ import com.github.mustachejava.MustacheException;
 import com.google.common.cache.ForwardingLoadingCache;
 import com.google.common.cache.LoadingCache;
 
-public class ReloadingMustacheFactory implements TemplateFactory {
+public class MustacheTemplateManager
+extends MustacheTemplateFactory
+implements TemplateManager {
 
-    private final ConcurrentHashMap<String, Resources> cachedResources = new ConcurrentHashMap<>();
-    private final ThreadLocal<Resources> currentResources = new ThreadLocal<>();
-    private final Log log = new Log();
+    private static final Log log = new Log();
 
-    private final ResourceManager manager;
-    private final Factory factory = new Factory();
+    private final Factory factory;
 
     /* ====================================================================== */
 
-    public ReloadingMustacheFactory(File root) {
+    public MustacheTemplateManager(File root) {
         this(new ResourceManager(root));
     }
 
-    public ReloadingMustacheFactory(File root, Charset charset) {
+    public MustacheTemplateManager(File root, Charset charset) {
         this(new ResourceManager(root, charset));
     }
 
-    public ReloadingMustacheFactory(ResourceManager manager) {
-        this.manager = Check.notNull(manager, "Null resource manager");
+    public MustacheTemplateManager(ResourceManager manager) {
+        super(new Factory(manager));
+        factory = (Factory) super.factory;
     }
 
     /* ====================================================================== */
 
     @Override
     public boolean canCompile(String name) {
-        final Resource resource = manager.getResource(name);
+        final Resource resource = factory.manager.getResource(name);
         if (resource != null) return true;
-        return manager.getResource(name + ".mustache") != null;
+        if (name.endsWith(".mustache")) return false;
+        return factory.manager.getResource(name + ".mustache") != null;
     }
 
     @Override
-    public ReloadingMustacheTemplate compile(String name) {
-        if (!name.endsWith(".mustache")) name = name + ".mustache";
-        return new ReloadingMustacheTemplate(this, name);
-    }
-
-    @Override
-    public CompiledTemplate compileInline(String template) {
-        final StringReader reader = new StringReader(template);
-        final Mustache mustache = factory.compile(reader, null);
-        return new CompiledTemplate() {
-
-            @Override
-            public void execute(Writer output, Object scope) {
-                mustache.execute(output, scope);
-            }
-
-        };
+    public Template compile(String name) {
+        final Resource resource = factory.manager.getResource(name);
+        if (resource != null) return new MustacheTemplate(this, name);
+        if (name.endsWith(".mustache")) return new MustacheTemplate(this, name);
+        return new MustacheTemplate(this, name + ".mustache");
     }
 
     /* ====================================================================== */
 
     protected Entry<Mustache, Resources> compileTemplate(String name) {
 
-        currentResources.remove();
+        factory.currentResources.remove();
         final Mustache mustache = factory.compile(name);
-        Resources resources = currentResources.get();
-        currentResources.remove();
+        Resources resources = factory.currentResources.get();
+        factory.currentResources.remove();
 
         /* If the template was cached, we return whatever we have */
         if (resources == null) {
-            resources = cachedResources.get(name);
+            resources = factory.cachedResources.get(name);
         } else {
-            cachedResources.put(name, resources); // Remember the resource
+            factory.cachedResources.put(name, resources); // Remember the resource
         }
 
         /* If we got something, remember the resources associated with this */
         if (resources != null) return new SimpleImmutableEntry<>(mustache, resources);
 
         /* No resources (read or cached)... Fail */
-        throw new MustacheException("No resources associated with \"" + name + "\"");
+        throw new TemplateException("No resources associated with \"" + name + "\"");
     }
 
 
     /* ====================================================================== */
 
-    private final class Factory extends DefaultMustacheFactory {
+    private static final class Factory extends DefaultMustacheFactory {
 
-        private Factory() {
-            /* Nothing to do... */
+        private final ConcurrentHashMap<String, Resources> cachedResources = new ConcurrentHashMap<>();
+        private final ThreadLocal<Resources> currentResources = new ThreadLocal<>();
+        private final ResourceManager manager;
+
+        private Factory(ResourceManager manager) {
+            this.manager = notNull(manager, "Null resource manager");
         }
 
         @Override
         public Reader getReader(String resourceName) {
             log.debug("Reading resource \"%s\"", resourceName);
             final Resource resource = manager.getResource(resourceName);
-            if (resource == null) throw new MustacheException("Mustache Resource \"" + resourceName + "\" not found");
+            if (resource == null)
+                    throw new MustacheException("Mustache Resource \"" + resourceName + "\" not found",
+                                                new FileNotFoundException(resourceName));
             final Resources current = currentResources.get();
             if (current == null) {
                 currentResources.set(new Resources(resource));

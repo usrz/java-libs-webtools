@@ -19,12 +19,14 @@ import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Collections;
+import java.util.Map;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.usrz.libs.configurations.Configurations;
 import org.usrz.libs.configurations.ConfigurationsBuilder;
@@ -33,26 +35,23 @@ import org.usrz.libs.logging.Log;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
 import org.usrz.libs.testing.NET;
+import org.usrz.libs.webtools.mustache.MustacheTemplateManager;
 
 
-public class MustacheJAXRSTest extends AbstractTest {
+public class TemplatesTest extends AbstractTest {
 
     private static final Log log = new Log();
     private ServerStarter starter;
+    private int port;
 
-    @AfterClass(alwaysRun=true)
-    public void after() {
-        if (starter != null) starter.stop();
-    }
-
-    @Test
-    public void testServeResource()
+    @BeforeClass
+    public void before()
     throws Exception {
         final File directory = IO.makeTempDir();
         IO.copy("Hello, {{>included}}!".getBytes(), new File(directory, "template.mustache"));
         IO.copy("{{name}}".getBytes(),              new File(directory, "included.mustache"));
 
-        final int port = NET.serverPort();
+        port = NET.serverPort();
         final Configurations serverConfig = new ConfigurationsBuilder()
                     .put("server.listener.port", port)
                     .put("server.listener.host", "127.0.0.1")
@@ -64,24 +63,27 @@ public class MustacheJAXRSTest extends AbstractTest {
 
         starter = new ServerStarter().start((builder) -> {
             builder.install((binder) -> {
-                binder.bind(TemplateFactory.class)
-                      .toInstance(new ReloadingMustacheFactory(directory));
+                binder.bind(TemplateManager.class)
+                      .toInstance(new MustacheTemplateManager(directory));
             });
 
             builder.configure(serverConfig.strip("server"));
             builder.serveApp("/mustache", (config) -> {
-                config.register(TemplateBodyWriter.class);
+                config.register(ViewBodyWriter.class);
                 config.register(TestResource.class);
             });
 
         });
 
         Thread.sleep(1000);
-
-        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withResponse"),   "Hello, mustache.jax.response!");
-        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withView"),       "Hello, mustache.jax.view!");
-        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withAnnotation"), "Hello, mustache.jax.annotation!");
     }
+
+    @AfterClass(alwaysRun=true)
+    public void after() {
+        if (starter != null) starter.stop();
+    }
+
+    /* ====================================================================== */
 
     private void assertRead(URL url, String expected)
     throws Exception {
@@ -100,6 +102,30 @@ public class MustacheJAXRSTest extends AbstractTest {
         assertEquals(new String(actual), expected);
     }
 
+    @Test
+    public void runTestWithResponse()
+    throws Exception {
+        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withResponse"), "Hello, mustache.jax.response!");
+    }
+
+    @Test
+    public void runTestWithView()
+    throws Exception {
+        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withView"),  "Hello, mustache.jax.view!");
+    }
+
+    @Test
+    public void runTestWithAnnotation()
+    throws Exception {
+        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withAnnotation"), "Hello, mustache.jax.annotation!");
+    }
+
+    @Test
+    public void runTestWithScope()
+    throws Exception {
+        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withScope"), "Hello, mustache.jax.scope!");
+    }
+
     /* ====================================================================== */
 
     @Path("/")
@@ -108,20 +134,28 @@ public class MustacheJAXRSTest extends AbstractTest {
         @GET
         @Path("withResponse")
         public Response withResponse() {
-            return View.template("template.mustache").with("name", "mustache.jax.response").response().build();
+            final Map<String, String> entity = Collections.singletonMap("name", "mustache.jax.response");
+            return ViewResponse.ok().view("template.mustache").entity(entity).build();
         }
 
         @GET
         @Path("withView")
-        public View withView() {
-            return View.template("template.mustache").with("name", "mustache.jax.view").view();
+        public Response withView() {
+            return ViewResponse.ok().view("template.mustache").with("name", "mustache.jax.view").build();
         }
 
         @GET
         @Path("withAnnotation")
-        @Template("template.mustache")
+        @View("template.mustache")
         public Object withAnnotation() {
             return Collections.singletonMap("name", "mustache.jax.annotation");
+        }
+
+        @GET
+        @Path("withScope")
+        @View("template.mustache")
+        public Scope withScope() {
+            return Scope.builder().with("name", "mustache.jax.scope").build();
         }
 
     }

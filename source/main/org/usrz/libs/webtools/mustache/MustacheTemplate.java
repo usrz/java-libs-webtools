@@ -13,39 +13,54 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.mustache;
 
 import static org.usrz.libs.utils.Check.notNull;
 
+import java.io.IOException;
 import java.io.Writer;
 import java.util.Map.Entry;
 
 import org.usrz.libs.webtools.resources.Resources;
+import org.usrz.libs.webtools.templates.Template;
+import org.usrz.libs.webtools.templates.TemplateException;
 
 import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheException;
 
-public class ReloadingMustacheTemplate implements CompiledTemplate {
+public class MustacheTemplate implements Template {
 
-    private final ReloadingMustacheFactory factory;
+    private final MustacheTemplateManager factory;
     private final String name;
     private Mustache mustache;
     private Resources resources;
 
-    protected ReloadingMustacheTemplate(ReloadingMustacheFactory factory, String name) {
+    protected MustacheTemplate(MustacheTemplateManager factory, String name) {
         this.factory = notNull(factory, "Null factory");
         this.name = notNull(name, "Null resource name");
         compile();
     }
 
     @Override
-    public void execute(Writer output, Object scope) {
+    public void execute(Writer output, Object scope)
+    throws IOException, TemplateException {
         if (resources.hasChanged()) compile();
-        mustache.execute(output, scope);
+        try {
+            mustache.execute(output, scope);
+        } catch (MustacheException exception) {
+            final Throwable cause = exception.getCause();
+            if ((cause != null) && (cause instanceof IOException)) throw (IOException) cause;
+            throw new TemplateException("Exception rendering Mustache", exception);
+        }
     }
 
     private void compile() {
-        final Entry<Mustache, Resources> compiled = factory.compileTemplate(name);
-        mustache = compiled.getKey();
-        resources = compiled.getValue();
+        try {
+            final Entry<Mustache, Resources> compiled = factory.compileTemplate(name);
+            mustache = compiled.getKey();
+            resources = compiled.getValue();
+        } catch (MustacheException exception) {
+            throw new TemplateException("Exception compiling Mustache", exception);
+        }
     }
 }

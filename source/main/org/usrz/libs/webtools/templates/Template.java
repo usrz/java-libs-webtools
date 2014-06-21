@@ -15,21 +15,25 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.templates;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.TYPE;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+public interface Template {
 
-@Inherited
-@Documented
-@Retention(RUNTIME)
-@Target({TYPE, METHOD})
-public @interface Template {
+    default String execute(Object scope)
+    throws TemplateException {
+        final StringWriter writer = new StringWriter();
+        try {
+            this.execute(writer, scope);
+            writer.flush();
+            return writer.toString();
+        } catch (IOException exception) {
+            throw new TemplateException("I/O error writing to StringWriter", exception);
+        }
+    }
 
-    String value();
+    public void execute(Writer output, Object scope)
+    throws IOException, TemplateException;
 
 }

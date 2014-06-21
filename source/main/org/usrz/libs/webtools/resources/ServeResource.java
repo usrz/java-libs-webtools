@@ -39,9 +39,9 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.usrz.libs.configurations.Configurations;
 import org.usrz.libs.logging.Log;
-import org.usrz.libs.webtools.MediaTypes;
 import org.usrz.libs.webtools.lesscss.LessCSS;
 import org.usrz.libs.webtools.uglifyjs.UglifyJS;
+import org.usrz.libs.webtools.utils.MediaTypes;
 
 /**
  * A <em>JAX-RS</em> resource serving static files.

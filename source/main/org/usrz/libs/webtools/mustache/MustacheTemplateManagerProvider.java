@@ -13,20 +13,29 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.mustache;
 
-import java.io.StringWriter;
-import java.io.Writer;
+import static org.usrz.libs.utils.Charsets.UTF8;
 
-public interface CompiledTemplate {
+import java.nio.charset.Charset;
 
-    default String execute(Object scope) {
-        final StringWriter writer = new StringWriter();
-        this.execute(writer, scope);
-        writer.flush();
-        return writer.toString();
+import javax.inject.Inject;
+
+import org.usrz.libs.configurations.Configurations;
+import org.usrz.libs.utils.inject.ConfigurableProvider;
+import org.usrz.libs.webtools.resources.ResourceManager;
+
+public class MustacheTemplateManagerProvider extends ConfigurableProvider<MustacheTemplateManager> {
+
+    @Inject
+    private MustacheTemplateManagerProvider() {
+        super(MustacheConfigurations.class);
     }
 
-    public void execute(Writer output, Object scope);
-
+    @Override
+    protected MustacheTemplateManager get(Configurations configurations) {
+        final Charset charset = Charset.forName(configurations.get("charset", UTF8.name()));
+        final ResourceManager manager = new ResourceManager(configurations.requireFile("root_path"), charset);
+        return new MustacheTemplateManager(manager);
+    }
 }

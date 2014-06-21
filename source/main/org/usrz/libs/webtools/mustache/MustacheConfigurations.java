@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.mustache;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
 
-@Inherited
-@Documented
+import javax.inject.Qualifier;
+
+@Qualifier
 @Retention(RUNTIME)
-@Target({TYPE, METHOD})
-public @interface View {
+public @interface MustacheConfigurations {
 
-    String value();
+    /* Empty annotation */
 
 }

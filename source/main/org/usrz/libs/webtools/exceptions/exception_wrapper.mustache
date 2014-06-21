@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HTTP/{{status_code}}: {{status_reason}}</title>
+    <style>
+      body { font-family: sans-serif; font-size: 14px; }
+      dl { font-size: 12px; }
+      dt { font-weight: bold; }
+      dd { font-family: monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>HTTP/{{status_code}}: {{status_reason}}</h1>
+    {{#message}}<p>{{message}}</p>{{/message}}
+    <dl>
+      {{#reference        }}<dt>Reference:</dt><dd>{{reference        }}</dd>{{/reference        }}
+      {{#exception_type   }}<dt>Exception:</dt><dd>{{exception_type   }}</dd>{{/exception_type   }}
+      {{#exception_message}}<dt>Message:  </dt><dd>{{exception_message}}</dd>{{/exception_message}}
+      {{#request_method   }}<dt>Method:   </dt><dd>{{request_method   }}</dd>{{/request_method   }}
+      {{#request_uri      }}<dt>URI:      </dt><dd>{{request_uri      }}</dd>{{/request_uri      }}
+    </dl>
+  </body>
+</html>

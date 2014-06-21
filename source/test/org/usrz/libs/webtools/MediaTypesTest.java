@@ -23,6 +23,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.testng.annotations.Test;
 import org.usrz.libs.testing.AbstractTest;
+import org.usrz.libs.webtools.utils.MediaTypes;
 
 public class MediaTypesTest extends AbstractTest {
 

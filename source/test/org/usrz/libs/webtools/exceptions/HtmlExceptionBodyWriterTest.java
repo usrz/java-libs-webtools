@@ -39,9 +39,9 @@ public class HtmlExceptionBodyWriterTest extends TestWithServer {
             builder.configure(serverConfig.strip("server"));
             builder.serveApp("/fail", (config) -> {
                 config.register(FailResource.class);
-                config.register(GeneralExceptionMapper.class);
-                config.register(HtmlExceptionBodyWriter.class);
-                config.register(JsonExceptionBodyWriter.class);
+                config.register(ExceptionWrapperMapper.class);
+                config.register(HtmlExceptionWrapperBodyWriter.class);
+                config.register(JsonExceptionWrapperBodyWriter.class);
             });
         });
 
@@ -53,65 +53,165 @@ public class HtmlExceptionBodyWriterTest extends TestWithServer {
     @Test
     public void testHtmlWithHtmlPriority()
     throws Exception {
-        assertResponse("/fail/html?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1", 500, "text/html; charset=UTF-8",
-                       "<!DOCTYPE html><html><head><title>Error 500: Internal Server Error</title></head><body><h1>Error 500: Internal Server Error</h1>"
-                       + "<dl><dt>Message:</dt><dd>HTML Error Parameter: &lt;div class=&quot;foobar&quot;&#x2f;&gt;-\u6771\u4EAC</dd><dt>Reference:</dt><dd>"
-                       + UUID_PATTERN + "</dd><dt>Exception:</dt><dd>java.lang.RuntimeException</dd></dl></body></html>");
+        request("/fail/html?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1")
+            .assertStatus(500)
+            .assertContentType("text/html; charset=UTF-8")
+            .assertMatch("<title>HTTP/500: Internal Server Error</title>")
+            .assertMatch("<h1>HTTP/500: Internal Server Error</h1>")
+            .assertMatch("<dt>Reference:\\s*</dt><dd>" + UUID_PATTERN + "</dd>")
+            .assertMatch("<dt>Exception:\\s*</dt><dd>java.lang.RuntimeException</dd>")
+            .assertMatch("<dt>Message:\\s*</dt><dd>HTML Error Parameter: &lt;div class=&quot;foobar&quot;/&gt;-\u6771\u4EAC</dd>")
+            .assertMatch("<dt>Method:\\s*</dt><dd>GET</dd>")
+            .assertMatch("<dt>URI:\\s*</dt><dd>http://127.0.0.1:\\d+/fail/html\\?p=")
+            ;
     }
 
     @Test
     public void testHtmlWithJsonPriority()
     throws Exception {
-        assertResponse("/fail/html?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9", 500, "text/html; charset=UTF-8",
-                       "<!DOCTYPE html><html><head><title>Error 500: Internal Server Error</title></head><body><h1>Error 500: Internal Server Error</h1>"
-                       + "<dl><dt>Message:</dt><dd>HTML Error Parameter: &lt;div class=&quot;foobar&quot;&#x2f;&gt;-\u6771\u4EAC</dd><dt>Reference:</dt><dd>"
-                       + UUID_PATTERN + "</dd><dt>Exception:</dt><dd>java.lang.RuntimeException</dd></dl></body></html>");
+        request("/fail/html?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9")
+            .assertStatus(500)
+            .assertContentType("text/html; charset=UTF-8")
+            .assertMatch("<title>HTTP/500: Internal Server Error</title>")
+            .assertMatch("<h1>HTTP/500: Internal Server Error</h1>")
+            .assertMatch("<dt>Reference:\\s*</dt><dd>" + UUID_PATTERN + "</dd>")
+            .assertMatch("<dt>Exception:\\s*</dt><dd>java.lang.RuntimeException</dd>")
+            .assertMatch("<dt>Message:\\s*</dt><dd>HTML Error Parameter: &lt;div class=&quot;foobar&quot;/&gt;-\u6771\u4EAC</dd>")
+            .assertMatch("<dt>Method:\\s*</dt><dd>GET</dd>")
+            .assertMatch("<dt>URI:\\s*</dt><dd>http://127.0.0.1:\\d+/fail/html\\?p=")
+            ;
     }
 
     @Test
     public void testJsonWithHtmlPriority()
     throws Exception {
-        assertResponse("/fail/json?p=foo%22bar%22baz-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1", 500, "application/json; charset=UTF-8",
-                       "\\{\"status_code\":500,\"status_reason\":\"Internal Server Error\",\"reference\":\"" + UUID_PATTERN + "\",\"message\":\"JSON Error Parameter: foo\\\\\"bar\\\\\"baz-\u6771\u4EAC\",\"exception\":\"java.lang.RuntimeException\"\\}");
+        request("/fail/json?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1")
+            .assertStatus(500)
+            .assertContentType("application/json; charset=UTF-8")
+            .assertMatch("\"status_code\":500")
+            .assertMatch("\"status_reason\":\"Internal Server Error\"")
+            .assertMatch("\"reference\":\"" + UUID_PATTERN + "\"")
+            .assertMatch("\"exception_type\":\"java.lang.RuntimeException\"")
+            .assertMatch("\"exception_message\":\"JSON Error Parameter: <div class=\\\\\"foobar\\\\\"/>-\u6771\u4EAC\"")
+            .assertMatch("\"request_method\":\"GET\"")
+            .assertMatch("\"request_uri\":\"http://127.0.0.1:\\d+/fail/json\\?p=")
+            ;
     }
 
     @Test
     public void testJsonWithJsonPriority()
     throws Exception {
-        assertResponse("/fail/json?p=foo%22bar%22baz-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9", 500, "application/json; charset=UTF-8",
-                       "\\{\"status_code\":500,\"status_reason\":\"Internal Server Error\",\"reference\":\"" + UUID_PATTERN + "\",\"message\":\"JSON Error Parameter: foo\\\\\"bar\\\\\"baz-\u6771\u4EAC\",\"exception\":\"java.lang.RuntimeException\"\\}");
+        request("/fail/json?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9")
+            .assertStatus(500)
+            .assertContentType("application/json; charset=UTF-8")
+            .assertMatch("\"status_code\":500")
+            .assertMatch("\"status_reason\":\"Internal Server Error\"")
+            .assertMatch("\"reference\":\"" + UUID_PATTERN + "\"")
+            .assertMatch("\"exception_type\":\"java.lang.RuntimeException\"")
+            .assertMatch("\"exception_message\":\"JSON Error Parameter: <div class=\\\\\"foobar\\\\\"/>-\u6771\u4EAC\"")
+            .assertMatch("\"request_method\":\"GET\"")
+            .assertMatch("\"request_uri\":\"http://127.0.0.1:\\d+/fail/json\\?p=")
+            ;
     }
 
     @Test
     public void testNegotiateWithHtmlPriority()
     throws Exception {
-        assertResponse("/fail/negotiate?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1", 500, "text/html; charset=UTF-8",
-                       "<!DOCTYPE html><html><head><title>Error 500: Internal Server Error</title></head><body><h1>Error 500: Internal Server Error</h1>"
-                       + "<dl><dt>Message:</dt><dd>Negotiated Error Parameter: &lt;div class=&quot;foobar&quot;&#x2f;&gt;-\u6771\u4EAC</dd><dt>Reference:</dt><dd>"
-                       + UUID_PATTERN + "</dd><dt>Exception:</dt><dd>java.lang.RuntimeException</dd></dl></body></html>");
+        request("/fail/negotiate?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1")
+            .assertStatus(500)
+            .assertContentType("text/html; charset=UTF-8")
+            .assertMatch("<title>HTTP/500: Internal Server Error</title>")
+            .assertMatch("<h1>HTTP/500: Internal Server Error</h1>")
+            .assertMatch("<dt>Reference:\\s*</dt><dd>" + UUID_PATTERN + "</dd>")
+            .assertMatch("<dt>Exception:\\s*</dt><dd>java.lang.RuntimeException</dd>")
+            .assertMatch("<dt>Message:\\s*</dt><dd>Negotiated Error Parameter: &lt;div class=&quot;foobar&quot;/&gt;-\u6771\u4EAC</dd>")
+            .assertMatch("<dt>Method:\\s*</dt><dd>GET</dd>")
+            .assertMatch("<dt>URI:\\s*</dt><dd>http://127.0.0.1:\\d+/fail/negotiate\\?p=")
+            ;
     }
 
     @Test
     public void testNegotiateWithJsonPriority()
     throws Exception {
-        assertResponse("/fail/negotiate?p=foo%22bar%22baz-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9", 500, "application/json; charset=UTF-8",
-                       "\\{\"status_code\":500,\"status_reason\":\"Internal Server Error\",\"reference\":\"" + UUID_PATTERN + "\",\"message\":\"Negotiated Error Parameter: foo\\\\\"bar\\\\\"baz-\u6771\u4EAC\",\"exception\":\"java.lang.RuntimeException\"\\}");
+        request("/fail/negotiate?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9")
+            .assertStatus(500)
+            .assertContentType("application/json; charset=UTF-8")
+            .assertMatch("\"status_code\":500")
+            .assertMatch("\"status_reason\":\"Internal Server Error\"")
+            .assertMatch("\"reference\":\"" + UUID_PATTERN + "\"")
+            .assertMatch("\"exception_type\":\"java.lang.RuntimeException\"")
+            .assertMatch("\"exception_message\":\"Negotiated Error Parameter: <div class=\\\\\"foobar\\\\\"/>-\u6771\u4EAC\"")
+            .assertMatch("\"request_method\":\"GET\"")
+            .assertMatch("\"request_uri\":\"http://127.0.0.1:\\d+/fail/negotiate\\?p=")
+            ;
+    }
+
+    @Test
+    public void testWebAppWithHtmlPriority()
+    throws Exception {
+        request("/fail/webapp?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1")
+            .assertStatus(410)
+            .assertContentType("text/html; charset=UTF-8")
+            .assertMatch("<title>HTTP/410: Gone</title>")
+            .assertMatch("<h1>HTTP/410: Gone</h1>")
+            .assertMatch("<p>WebApp Error Parameter: &lt;div class=&quot;foobar&quot;/&gt;-\u6771\u4EAC</p>")
+            .assertMatch("<dt>Reference:\\s*</dt><dd>" + UUID_PATTERN + "</dd>")
+            .assertMatch("<dt>Method:\\s*</dt><dd>GET</dd>")
+            .assertMatch("<dt>URI:\\s*</dt><dd>http://127.0.0.1:\\d+/fail/webapp\\?p=")
+            .assertNotMatch("<dt>Exception:\\s*</dt>")
+            .assertNotMatch("<dt>Message:\\s*</dt>")
+            ;
+    }
+
+    @Test
+    public void testWebAppWithJsonPriority()
+    throws Exception {
+        request("/fail/webapp?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9")
+            .assertStatus(410)
+            .assertContentType("application/json; charset=UTF-8")
+            .assertMatch("\"status_code\":410")
+            .assertMatch("\"status_reason\":\"Gone\"")
+            .assertMatch("\"reference\":\"" + UUID_PATTERN + "\"")
+            .assertMatch("\"message\":\"WebApp Error Parameter: <div class=\\\\\"foobar\\\\\"/>-\u6771\u4EAC\"")
+            .assertMatch("\"request_method\":\"GET\"")
+            .assertMatch("\"request_uri\":\"http://127.0.0.1:\\d+/fail/webapp\\?p=")
+            .assertNotMatch("\"exception_type\"")
+            .assertNotMatch("\"exception_message\"")
+            ;
     }
 
     @Test
     public void testTemplatedWithHtmlPriority()
     throws Exception {
-        assertResponse("/fail/template?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1", 500, "text/html; charset=UTF-8",
-                       "<!DOCTYPE html><html><head><title>Error 500: Internal Server Error</title></head><body><h1>Error 500: Internal Server Error</h1>"
-                       + "<dl><dt>Message:</dt><dd>Templated Error Parameter: &lt;div class=&quot;foobar&quot;&#x2f;&gt;-\u6771\u4EAC</dd><dt>Reference:</dt><dd>"
-                       + UUID_PATTERN + "</dd><dt>Exception:</dt><dd>org.usrz.libs.webtools.exceptions.TemplatedException</dd></dl></body></html>");
+        request("/fail/template?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.9,application/json;q=0.1")
+            .assertStatus(403)
+            .assertContentType("text/html; charset=UTF-8")
+            .assertMatch("<title>HTTP/403: Forbidden</title>")
+            .assertMatch("<h1>HTTP/403: Forbidden</h1>")
+            .assertMatch("<p>Templated Error Parameter: &lt;div class=&quot;foobar&quot;/&gt;-\u6771\u4EAC</p>")
+            .assertMatch("<dt>Reference:\\s*</dt><dd>" + UUID_PATTERN + "</dd>")
+            .assertMatch("<dt>Method:\\s*</dt><dd>GET</dd>")
+            .assertMatch("<dt>URI:\\s*</dt><dd>http://127.0.0.1:\\d+/fail/template\\?p=")
+            .assertNotMatch("<dt>Exception:\\s*</dt>")
+            .assertNotMatch("<dt>Message:\\s*</dt>")
+            ;
     }
 
     @Test
     public void testTemplatedWithJsonPriority()
     throws Exception {
-        assertResponse("/fail/template?p=foo%22bar%22baz-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9", 500, "application/json; charset=UTF-8",
-                       "\\{\"status_code\":500,\"status_reason\":\"Internal Server Error\",\"reference\":\"" + UUID_PATTERN + "\",\"message\":\"Templated Error Parameter: foo\\\\\"bar\\\\\"baz-\u6771\u4EAC\",\"exception\":\"org.usrz.libs.webtools.exceptions.TemplatedException\"\\}");
+        request("/fail/template?p=%3Cdiv+class=%22foobar%22%2F%3E-%e6%9d%b1%e4%ba%ac", "text/html;q=0.1,application/json;q=0.9")
+            .assertStatus(403)
+            .assertContentType("application/json; charset=UTF-8")
+            .assertMatch("\"status_code\":403")
+            .assertMatch("\"status_reason\":\"Forbidden\"")
+            .assertMatch("\"reference\":\"" + UUID_PATTERN + "\"")
+            .assertMatch("\"message\":\"Templated Error Parameter: <div class=\\\\\"foobar\\\\\"/>-\u6771\u4EAC\"")
+            .assertMatch("\"request_method\":\"GET\"")
+            .assertMatch("\"request_uri\":\"http://127.0.0.1:\\d+/fail/template\\?p=")
+            .assertNotMatch("\"exception_type\"")
+            .assertNotMatch("\"exception_message\"")
+            ;
     }
 
 }
