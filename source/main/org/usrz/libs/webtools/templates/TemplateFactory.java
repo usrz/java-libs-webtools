@@ -15,20 +15,15 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.templates;
 
-import java.io.StringWriter;
 
 public interface TemplateFactory {
 
-    default String execute(String template, Object scope) {
-        final StringWriter writer = new StringWriter();
-        compileInline(template).execute(writer, scope);
-        return writer.toString();
+    default String execute(String template, Object scope)
+    throws TemplateException {
+        return parse(template).execute(scope);
     }
 
-    public CompiledTemplate compileInline(String template);
-
-    public CompiledTemplate compile(String name);
-
-    public boolean canCompile(String name);
+    public Template parse(String template)
+    throws TemplateException;
 
 }

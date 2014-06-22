@@ -28,13 +28,8 @@ import org.usrz.libs.configurations.ConfigurationsBuilder;
 import org.usrz.libs.httpd.ServerStarter;
 import org.usrz.libs.testing.IO;
 import org.usrz.libs.testing.NET;
-import org.usrz.libs.webtools.exceptions.GeneralExceptionMapper;
-import org.usrz.libs.webtools.exceptions.HtmlExceptionBodyWriter;
-import org.usrz.libs.webtools.exceptions.JsonExceptionBodyWriter;
-import org.usrz.libs.webtools.exceptions.TemplateExceptionBodyWriter;
-import org.usrz.libs.webtools.exceptions.TemplatedException;
-import org.usrz.libs.webtools.templates.ReloadingMustacheFactory;
-import org.usrz.libs.webtools.templates.TemplateFactory;
+import org.usrz.libs.webtools.mustache.MustacheTemplateManager;
+import org.usrz.libs.webtools.templates.TemplateManager;
 
 public class TemplatedExceptionTest extends TestWithServer {
 
@@ -58,15 +53,13 @@ public class TemplatedExceptionTest extends TestWithServer {
                     .build();
 
         starter = new ServerStarter().start((builder) -> {
-            builder.install((binder) -> binder.bind(TemplateFactory.class).toInstance(new ReloadingMustacheFactory(root)));
+            builder.install((binder) -> binder.bind(TemplateManager.class).toInstance(new MustacheTemplateManager(root)));
             builder.configure(serverConfig.strip("server"));
             builder.serveApp("/fail", (config) -> {
                 config.register(TestResource.class);
-                config.register(GeneralExceptionMapper.class);
-//                config.register(TemplatedExceptionMapper.class);
-                config.register(JsonExceptionBodyWriter.class);
-                config.register(HtmlExceptionBodyWriter.class);
-                config.register(TemplateExceptionBodyWriter.class);
+                config.register(ExceptionWrapperMapper.class);
+                config.register(JsonExceptionWrapperBodyWriter.class);
+                config.register(ViewExceptionWrapperBodyWriter.class);
             });
         });
 
@@ -113,12 +106,11 @@ public class TemplatedExceptionTest extends TestWithServer {
         public void get(@QueryParam("s") int status,
                         @QueryParam("m") String message,
                         @QueryParam("p") String parameter) {
-            throw new TemplatedException.Builder()
-                                        .status(status)
-                                        .message(message)
-                                        .partial("partial", "<div>{{parameter}}</div>")
-                                        .put("parameter", parameter)
-                                        .build();
+            throw new WebApplicationExceptionBuilder(status)
+                    .message(message)
+                    .partial("partial", "<div>{{parameter}}</div>")
+                    .with("parameter", parameter)
+                    .build();
         }
     }
 }

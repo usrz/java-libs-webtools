@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.mustache;
 
 import static java.util.Collections.singletonMap;
 import static org.usrz.libs.utils.Charsets.UTF8;
@@ -27,8 +27,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.usrz.libs.testing.AbstractTest;
 import org.usrz.libs.testing.IO;
-import org.usrz.libs.webtools.templates.ReloadingMustacheFactory;
-import org.usrz.libs.webtools.templates.ReloadingMustacheTemplate;
+import org.usrz.libs.webtools.mustache.MustacheTemplateManager;
+import org.usrz.libs.webtools.templates.Template;
 
 public class MustacheTest extends AbstractTest {
 
@@ -37,13 +37,13 @@ public class MustacheTest extends AbstractTest {
     private final byte[] included2 = " to everyone in the ".getBytes(UTF8);
 
     private File root;
-    private ReloadingMustacheFactory factory;
+    private MustacheTemplateManager factory;
 
     @BeforeClass
     public void before()
     throws IOException {
         root = IO.makeTempDir();
-        factory = new ReloadingMustacheFactory(root);
+        factory = new MustacheTemplateManager(root);
     }
 
     @Test
@@ -66,7 +66,7 @@ public class MustacheTest extends AbstractTest {
 
         /* Compile and check we have what we want (first) */
         final Map<String, Object> scopes1 = Collections.singletonMap("name", "(one)");
-        final ReloadingMustacheTemplate mustache1 = factory.compile("template.mustache");
+        final Template mustache1 = factory.compile("template.mustache");
         assertEquals(mustache1.execute(scopes1), "Hello, world! (one)");
 
         /* Change the file but keep the old time stamp */
@@ -75,14 +75,14 @@ public class MustacheTest extends AbstractTest {
 
         /* No changes should happen, either recompiling or re-applying */
         final Map<String, Object> scopes2 = Collections.singletonMap("name", "(two)");
-        final ReloadingMustacheTemplate mustache2 = factory.compile("template.mustache");
+        final Template mustache2 = factory.compile("template.mustache");
         assertEquals(mustache1.execute(scopes2), "Hello, world! (two)");
         assertEquals(mustache2.execute(scopes2), "Hello, world! (two)");
 
         /* Touch the file and verify the changes */
         file.setLastModified(System.currentTimeMillis());
         final Map<String, Object> scopes3 = Collections.singletonMap("name", "(three)");
-        final ReloadingMustacheTemplate mustache3 = factory.compile("template.mustache");
+        final Template mustache3 = factory.compile("template.mustache");
         assertEquals(mustache1.execute(scopes3), "Hello to everyone in the world! (three)");
         assertEquals(mustache2.execute(scopes3), "Hello to everyone in the world! (three)");
         assertEquals(mustache3.execute(scopes3), "Hello to everyone in the world! (three)");

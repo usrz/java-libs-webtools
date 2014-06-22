@@ -17,14 +17,15 @@ package org.usrz.libs.webtools.exceptions;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_HTML;
+import static javax.ws.rs.core.Response.Status.FORBIDDEN;
+import static javax.ws.rs.core.Response.Status.GONE;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
-
-import org.usrz.libs.webtools.exceptions.TemplatedException;
 
 @Path("/")
 public class FailResource {
@@ -50,13 +51,19 @@ public class FailResource {
     }
 
     @GET
+    @Path("/webapp")
+    public Response webapp(@QueryParam("p") String param) {
+        throw new WebApplicationException("WebApp Error Parameter: " + param, GONE);
+    }
+
+    @GET
     @Path("/template")
     public Response template(@QueryParam("p") String param) {
-        throw new TemplatedException.Builder()
-                                    .message("Templated Error Parameter: " + param)
-                                    .partial("partial", "The partial says {{param}}!")
-                                    .put("param", param)
-                                    .build();
+        throw new WebApplicationExceptionBuilder(FORBIDDEN)
+                .message("Templated Error Parameter: " + param)
+                .partial("partial", "The partial says {{param}}!")
+                .with("param", param)
+                .build();
     }
 
 }

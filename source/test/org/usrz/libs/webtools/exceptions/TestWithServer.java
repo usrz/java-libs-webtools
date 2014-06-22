@@ -15,10 +15,14 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.exceptions;
 
+import static java.util.regex.Pattern.DOTALL;
 import static org.usrz.libs.utils.Charsets.UTF8;
 
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -44,12 +48,51 @@ public abstract class TestWithServer extends AbstractTest {
 
     /* ====================================================================== */
 
-    protected void assertResponse(String path, String accept, int acceptableStatus, String acceptableType, String acceptablePattern)
+    protected final class Response {
+
+        public final int status;
+        public final String contentType;
+        public final String content;
+
+        private Response(int status, String contentType, String content) {
+            this.status = status;
+            this.contentType = contentType;
+            this.content = content;
+        }
+
+        public Response assertStatus(int status) {
+            assertEquals(this.status, status, "Wrong status code");
+            return this;
+        }
+
+        public Response assertContentType(String contentType) {
+            assertEquals(this.contentType, contentType, "Wrong content type");
+            return this;
+        }
+
+        public Response assertMatch(String contentPattern) {
+            final Pattern pattern = Pattern.compile(contentPattern, DOTALL);
+            final Matcher matcher = pattern.matcher(content);
+            assertTrue(matcher.find(), "\nWrong response for pattern " + pattern + "\n" + content);
+            return this;
+        }
+
+        public Response assertNotMatch(String contentPattern) {
+            final Pattern pattern = Pattern.compile(contentPattern, DOTALL);
+            final Matcher matcher = pattern.matcher(content);
+            assertFalse(matcher.find(), "\nWrong response for non-matching pattern " + pattern + "\n" + content);
+            return this;
+        }
+    }
+
+    /* ====================================================================== */
+
+    protected Response request(String path, String accept)
     throws Exception {
         URL url = new URL("http://127.0.0.1:" + port + path);
         log.info("Requesting \"%s\" with Accept \"%s\"", url, accept);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestProperty("Accept", accept);
+        if (accept != null) connection.setRequestProperty("Accept", accept);
         connection.connect();
 
         System.out.println("--> HTTP/" + connection.getResponseCode() + " " + connection.getResponseMessage());
@@ -58,13 +101,24 @@ public abstract class TestWithServer extends AbstractTest {
                 System.out.println("--> " + name + ": " + value);
             });
         });
-        final String actual = new String(IO.read(connection.getErrorStream()), UTF8).trim();
-        System.out.println(">>> " + actual);
 
-        assertEquals(connection.getResponseCode(), acceptableStatus, "Wrong status code");
-        assertEquals(connection.getHeaderField("Content-Type"), acceptableType, "Wrong Content-Type header");
+        InputStream stream = connection.getErrorStream();
+        if (stream == null) stream = connection.getInputStream();
 
-        assertTrue(actual.matches(acceptablePattern), "\nWrong response: " + actual + "\n       pattern: " + acceptablePattern + "\n");
+        final String actual = new String(IO.read(stream), UTF8);
+        System.out.println(">>> " + actual.replace("\n", "\n>>> "));
+        return new Response(connection.getResponseCode(),
+                            connection.getHeaderField("Content-Type"),
+                            actual);
+    }
+
+
+    protected void assertResponse(String path, String accept, int acceptableStatus, String acceptableType, String acceptablePattern)
+    throws Exception {
+        request(path, accept)
+                .assertStatus(acceptableStatus)
+                .assertContentType(acceptableType)
+                .assertMatch(acceptablePattern);
     }
 
 }

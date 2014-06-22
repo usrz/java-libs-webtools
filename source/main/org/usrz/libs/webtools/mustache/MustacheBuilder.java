@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.templates;
+package org.usrz.libs.webtools.mustache;
 
 import org.usrz.libs.utils.inject.ConfiguringBindingBuilder;
+import org.usrz.libs.webtools.templates.TemplateManager;
 
 import com.google.inject.Binder;
 
-public class TemplatesBuilder extends ConfiguringBindingBuilder<TemplatesBuilder> {
+public class MustacheBuilder extends ConfiguringBindingBuilder<MustacheBuilder> {
 
-    public TemplatesBuilder(Binder binder) {
-        super(binder, TemplatesConfigurations.class);
-        binder.bind(TemplateFactory.class).toProvider(ReloadingMustacheProvider.class);
+    public MustacheBuilder(Binder binder) {
+        super(binder, MustacheConfigurations.class);
+        binder.bind(TemplateManager.class).toProvider(MustacheTemplateManagerProvider.class);
     }
 
 }

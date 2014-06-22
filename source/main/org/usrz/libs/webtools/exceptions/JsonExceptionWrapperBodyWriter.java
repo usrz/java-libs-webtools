@@ -15,6 +15,9 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.exceptions;
 
+import static com.fasterxml.jackson.databind.SerializationFeature.CLOSE_CLOSEABLE;
+import static com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS;
+import static javax.ws.rs.Priorities.USER;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 import static org.usrz.libs.utils.Charsets.UTF8;
@@ -22,6 +25,8 @@ import static org.usrz.libs.utils.Check.notNull;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.annotation.Annotation;
+import java.util.Map;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -30,30 +35,37 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.ext.Provider;
 
-import org.usrz.libs.webtools.AbstractMessageBodyWriter;
+import org.usrz.libs.webtools.mustache.MustacheTemplateFactory;
+import org.usrz.libs.webtools.templates.TemplateFactory;
+import org.usrz.libs.webtools.utils.EncodingMessageBodyWriter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Provider
 @Singleton
-@Priority(1000)
+@Priority(USER + 1000)
 @Produces(APPLICATION_JSON)
-public class JsonExceptionBodyWriter extends AbstractMessageBodyWriter<ExceptionWrapper> {
+public class JsonExceptionWrapperBodyWriter extends EncodingMessageBodyWriter<ExceptionWrapper> {
 
+    private final TemplateFactory factory;
     private final ObjectMapper mapper;
 
     @Inject
-    private JsonExceptionBodyWriter(ObjectMapper mapper) {
+    private JsonExceptionWrapperBodyWriter(ObjectMapper mapper) {
         super(ExceptionWrapper.class, APPLICATION_JSON_TYPE, UTF8);
         this.mapper = notNull(mapper, "Null object mapper");
+
+        /* Create the factory and template */
+        factory = new MustacheTemplateFactory();
     }
 
     @Override
-    protected void writeTo(ExceptionWrapper wrapper, Writer writer)
+    protected void writeTo(ExceptionWrapper instance, Annotation[] annotations, Writer writer)
     throws IOException, WebApplicationException {
-        /* Write a *STRING* since no matter what, Jackson *closes* the writer */
-        writer.write(mapper.writeValueAsString(wrapper));
+        final Map<String, Object> details = instance.compute(factory);
+        writer.write(mapper.writer(ORDER_MAP_ENTRIES_BY_KEYS)
+                           .without(CLOSE_CLOSEABLE)
+                           .writeValueAsString(details));
     }
-
 
 }

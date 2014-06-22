@@ -15,16 +15,24 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.templates;
 
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+public class TemplateException extends RuntimeException {
 
-import java.lang.annotation.Retention;
+    public TemplateException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
-import javax.inject.Qualifier;
+    public TemplateException(String message) {
+        super(message);
+    }
 
-@Qualifier
-@Retention(RUNTIME)
-public @interface TemplatesConfigurations {
+    public TemplateException(Throwable cause) {
+        super(cause);
+    }
 
-    /* Empty annotation */
+    @Override
+    public TemplateException initCause(Throwable cause) {
+        super.initCause(cause);
+        return this;
+    }
 
 }

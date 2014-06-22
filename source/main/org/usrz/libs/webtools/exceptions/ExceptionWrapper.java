@@ -15,86 +15,140 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.exceptions;
 
-import static org.usrz.libs.utils.Check.notNull;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Request;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.StatusType;
+import javax.ws.rs.core.UriInfo;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import org.usrz.libs.logging.Log;
+import org.usrz.libs.webtools.templates.Scope;
+import org.usrz.libs.webtools.templates.TemplateFactory;
 
-@JsonPropertyOrder({"status_code", "status_reason", "reference", "message", "exception"})
-public final class ExceptionWrapper {
+public class ExceptionWrapper implements Scope {
 
-    private final UUID uuid;
+    private static final Log log = new Log();
+
     private final StatusType status;
+    private final Throwable cause;
+    private final UUID reference;
     private final String message;
-    private final Throwable exception;
+    private final String method;
+    private final URI location;
+    private final Scope scope;
 
-    protected ExceptionWrapper(Throwable exception) {
-        this(Status.INTERNAL_SERVER_ERROR, exception);
+    public ExceptionWrapper(Throwable wrapped, UriInfo uri, Request request) {
+        if (wrapped == null) throw new NullPointerException("Null exception to wrap");
+
+        if (wrapped instanceof WebApplicationException) {
+            final WebApplicationException exception = (WebApplicationException) wrapped;
+            final Response response = exception.getResponse();
+            status = response.getStatusInfo();
+            message = exception.getMessage();
+            cause = exception.getCause();
+        } else {
+            message = "Exception caught processing request";
+            status = INTERNAL_SERVER_ERROR;
+            cause = wrapped;
+        }
+
+        scope = wrapped instanceof Scope ? (Scope) wrapped : null;
+        reference = UUID.randomUUID();
+        method = method(request);
+        location = location(uri);
     }
 
-    protected ExceptionWrapper(StatusType status, Throwable exception) {
-        this.status = notNull(status, "Null status");
-        this.exception = exception;
-
-        /* Message, either specified, or from exception, or from status */
-        message = exception != null ?
-                exception.getMessage() :
-                status.getReasonPhrase();
-
-        /* The reference UUID is only available if we have an exception */
-        uuid = exception == null ? null : UUID.randomUUID();
+    private final String method(Request request) {
+        if (request != null) try {
+            return request.getMethod();
+        } catch (IllegalStateException exception) {
+            log.warn(exception, "Unable to initalize request method for Exception Wrapper");
+        }
+        return null;
     }
 
-    @JsonIgnore
+    private final URI location(UriInfo uri) {
+        if (uri != null) try {
+            return uri.getRequestUri();
+        } catch (IllegalStateException exception) {
+            log.warn(exception, "Unable to initalize request location for Exception Wrapper");
+        }
+        return null;
+    }
+
     public StatusType getStatus() {
         return status;
     }
 
-    @JsonProperty("status_code")
-    public int getStatusCode() {
-        return status.getStatusCode();
-    }
-
-    @JsonProperty("status_reason")
-    public String getStatusReason() {
-        return status.getReasonPhrase();
-    }
-
-    @JsonProperty("message")
     public String getMessage() {
         return message;
     }
 
-    @JsonProperty("reference")
+    public Throwable getCause() {
+        return cause;
+    }
+
     public UUID getReference() {
-        return uuid;
+        return reference;
     }
 
-    @JsonIgnore
-    public Throwable getException() {
-        return exception;
+    public String getRequestMethod() {
+        return method;
     }
 
-    @JsonProperty("exception")
-    public Class<? extends Throwable> getExceptionType() {
-        return exception == null ? null : exception.getClass();
+    public URI getRequestURI() {
+        return location;
     }
 
-    public Map<String, Object> toMap() {
+    @Override
+    public Map<String, Object> compute(TemplateFactory templates) {
         final Map<String, Object> map = new HashMap<>();
-        map.put("status_code", getStatusCode());
-        map.put("status_reason", getStatusReason());
-        map.put("message", getMessage());
-        map.put("reference", getReference());
-        map.put("exception", getExceptionType());
+        if (scope != null) map.putAll(scope.compute(templates));
+
+        /* Status is always here, the other we normalize */
+        map.put("status_code", status.getStatusCode());
+        map.put("status_reason", status.getReasonPhrase());
+        map.put("reference", reference);
+
+        /* Exception cause */
+        if (cause != null) {
+            map.put("exception_type", cause.getClass().getName());
+            map.put("exception_message", cause.getMessage());
+        } else {
+            map.remove("exception_type");
+            map.remove("exception_message");
+        }
+
+        /* Message */
+        if (message != null) {
+            map.put("message", message);
+        } else {
+            map.remove("message");
+        }
+
+        /* Method */
+        if (method != null) {
+            map.put("request_method", method);
+        } else {
+            map.remove("request_method");
+        }
+
+        /* Location */
+        if (location != null) {
+            map.put("request_uri", location);
+        } else {
+            map.remove("request_uri");
+        }
+
+        /* Done */
         return map;
     }
+
 }

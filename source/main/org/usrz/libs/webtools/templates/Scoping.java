@@ -15,27 +15,10 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.templates;
 
-import static org.usrz.libs.utils.Charsets.UTF8;
+public interface Scoping<S extends Scoping<S>> {
 
-import java.nio.charset.Charset;
+    public S with(String key, Object value);
 
-import javax.inject.Inject;
+    public S partial(String name, String partial);
 
-import org.usrz.libs.configurations.Configurations;
-import org.usrz.libs.utils.inject.ConfigurableProvider;
-import org.usrz.libs.webtools.resources.ResourceManager;
-
-public class ReloadingMustacheProvider extends ConfigurableProvider<ReloadingMustacheFactory> {
-
-    @Inject
-    private ReloadingMustacheProvider() {
-        super(TemplatesConfigurations.class);
-    }
-
-    @Override
-    protected ReloadingMustacheFactory get(Configurations configurations) {
-        final Charset charset = Charset.forName(configurations.get("charset", UTF8.name()));
-        final ResourceManager manager = new ResourceManager(configurations.requireFile("root_path"), charset);
-        return new ReloadingMustacheFactory(manager);
-    }
 }
