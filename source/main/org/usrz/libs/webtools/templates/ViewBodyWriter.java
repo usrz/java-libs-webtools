@@ -60,8 +60,6 @@ public class ViewBodyWriter extends EncodingMessageBodyWriter<Object> {
     public void writeTo(Object object, Annotation[] annotations, Writer writer)
     throws IOException, WebApplicationException {
 
-        System.err.println("SCOPE IS WRITING -> " + object);
-
         /* Figure our the view: the last one takes precedence */
         View view = null;
         for (Annotation annotation: annotations)

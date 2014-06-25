@@ -15,6 +15,8 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.templates;
 
+import static java.util.Collections.EMPTY_MAP;
+
 import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.util.ArrayList;
@@ -149,7 +151,10 @@ public class ViewResponse {
 
         @Override
         public Response build() {
-            final Object object = scope != null ? scope.build() : entity;
+            final Object object = scope != null ? scope.build() :
+                                  entity != null ? entity :
+                                  view != null ? EMPTY_MAP :
+                                      null;
 
             final List<Annotation> list = new ArrayList<>();
             if (annotations != null) list.addAll(annotations);
