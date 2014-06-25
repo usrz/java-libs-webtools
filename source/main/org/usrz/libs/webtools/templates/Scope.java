@@ -50,7 +50,6 @@ public interface Scope {
                     scope.putAll(properties);
                     partials.forEach((name, partial) ->
                         scope.put(name, templates.parse(partial).execute(properties)));
-                    System.err.println("SCOPE CONTAINS -> " + scope);
                     return scope;
                 };
             }
