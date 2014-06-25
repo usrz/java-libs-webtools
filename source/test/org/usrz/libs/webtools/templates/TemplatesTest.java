@@ -115,6 +115,12 @@ public class TemplatesTest extends AbstractTest {
     }
 
     @Test
+    public void runTestWithViewOnly()
+    throws Exception {
+        assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withViewOnly"),  "Hello, !");
+    }
+
+    @Test
     public void runTestWithAnnotation()
     throws Exception {
         assertRead(new URL("http://127.0.0.1:" + port + "/mustache/withAnnotation"), "Hello, mustache.jax.annotation!");
@@ -142,6 +148,12 @@ public class TemplatesTest extends AbstractTest {
         @Path("withView")
         public Response withView() {
             return ViewResponse.ok().view("template.mustache").with("name", "mustache.jax.view").build();
+        }
+
+        @GET
+        @Path("withViewOnly")
+        public Response withViewOnly() {
+            return ViewResponse.ok().view("template.mustache").build();
         }
 
         @GET
