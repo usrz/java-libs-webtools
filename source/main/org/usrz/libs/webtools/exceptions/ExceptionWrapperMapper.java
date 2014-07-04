@@ -54,7 +54,6 @@ public class ExceptionWrapperMapper implements ExceptionMapper<Throwable> {
 
         final ExceptionWrapper wrapper = new ExceptionWrapper(throwable, uri, request);
 
-        final Throwable cause = wrapper.getCause();
         final StatusType status = wrapper.getStatus();
         final int statusCode = status.getStatusCode();
 
@@ -66,12 +65,14 @@ public class ExceptionWrapperMapper implements ExceptionMapper<Throwable> {
                 status.getReasonPhrase(),
                 wrapper.getMessage() };
 
+        final Throwable cause = wrapper.getCause();
+        final Throwable loggable = cause == null ? throwable : cause;
         if (statusCode < 400) {
-            log.info(cause, LOG_FORMAT, arguments);
+            log.info(loggable, LOG_FORMAT, arguments);
         } else if (statusCode < 500) {
-            log.warn(cause, LOG_FORMAT, arguments);
+            log.warn(loggable, LOG_FORMAT, arguments);
         } else {
-            log.error(cause, LOG_FORMAT, arguments);
+            log.error(loggable, LOG_FORMAT, arguments);
         }
 
         return wrapper;
