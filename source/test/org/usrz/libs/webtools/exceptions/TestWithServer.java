@@ -87,12 +87,18 @@ public abstract class TestWithServer extends AbstractTest {
 
     /* ====================================================================== */
 
+    protected Response request(String path)
+    throws Exception {
+        return request(path, null);
+    }
+
     protected Response request(String path, String accept)
     throws Exception {
         URL url = new URL("http://127.0.0.1:" + port + path);
         log.info("Requesting \"%s\" with Accept \"%s\"", url, accept);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         if (accept != null) connection.setRequestProperty("Accept", accept);
+        connection.setInstanceFollowRedirects(false);
         connection.connect();
 
         System.out.println("--> HTTP/" + connection.getResponseCode() + " " + connection.getResponseMessage());

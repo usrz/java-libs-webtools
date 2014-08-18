@@ -214,4 +214,21 @@ public class HtmlExceptionBodyWriterTest extends TestWithServer {
             ;
     }
 
+    @Test
+    public void test204()
+    throws Exception {
+        request("/fail/204")
+            .assertStatus(204)
+            .assertContentType(null)
+            .assertMatch("^$");
+    }
+
+    @Test
+    public void test307()
+    throws Exception {
+        request("/fail/307")
+            .assertStatus(307)
+            .assertContentType(null)
+            .assertMatch("^$");
+    }
 }
