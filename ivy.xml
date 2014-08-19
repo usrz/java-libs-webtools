@@ -18,13 +18,14 @@
   <dependencies>
 
     <dependency org="javax" name="ws-rs" rev="latest.release" conf="default"/>
+    <dependency org="javax" name="validation" rev="latest.release" conf="default"/>
+
     <dependency org="com.github" name="mustache" rev="latest.release" conf="default"/>
     <dependency org="org.usrz.libs" name="utils" rev="latest.release" conf="default"/>
     <dependency org="org.usrz.libs" name="logging" rev="latest.release" conf="default"/>
 
     <dependency org="javax" name="annotation" rev="latest.release" conf="compile-&gt;default"/>
     <dependency org="com.fasterxml" name="jackson-databind" rev="latest.release" conf="compile-&gt;default"/>
-    <dependency org="org.hibernate" name="validator" rev="latest.release" conf="compile-&gt;default"/>
 
     <dependency org="org.usrz.libs" name="httpd" rev="latest.release" conf="testing-&gt;default"/>
     <dependency org="org.usrz.libs" name="testing" rev="latest.release" conf="testing-&gt;logging"/>
