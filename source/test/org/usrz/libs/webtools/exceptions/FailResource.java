@@ -19,11 +19,15 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_HTML;
 import static javax.ws.rs.core.Response.Status.FORBIDDEN;
 import static javax.ws.rs.core.Response.Status.GONE;
+import static javax.ws.rs.core.Response.Status.TEMPORARY_REDIRECT;
+
+import java.net.URI;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.RedirectionException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
@@ -64,6 +68,19 @@ public class FailResource {
                 .partial("partial", "The partial says {{param}}!")
                 .with("param", param)
                 .build();
+    }
+
+    @GET
+    @Path("/204")
+    public Response status204() {
+        final Response response = Response.noContent().build();
+        throw new WebApplicationException(response);
+    }
+
+    @GET
+    @Path("/307")
+    public Response status307() {
+        throw new RedirectionException(TEMPORARY_REDIRECT, URI.create("/"));
     }
 
 }

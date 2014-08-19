@@ -65,14 +65,12 @@ public class ExceptionWrapperMapper implements ExceptionMapper<Throwable> {
                 status.getReasonPhrase(),
                 wrapper.getMessage() };
 
-        final Throwable cause = wrapper.getCause();
-        final Throwable loggable = cause == null ? throwable : cause;
         if (statusCode < 400) {
-            log.info(loggable, LOG_FORMAT, arguments);
+            log.info(LOG_FORMAT, arguments); /* Just in case */
         } else if (statusCode < 500) {
-            log.warn(loggable, LOG_FORMAT, arguments);
+            log.warn(throwable, LOG_FORMAT, arguments);
         } else {
-            log.error(loggable, LOG_FORMAT, arguments);
+            log.error(throwable, LOG_FORMAT, arguments);
         }
 
         return wrapper;
@@ -83,14 +81,17 @@ public class ExceptionWrapperMapper implements ExceptionMapper<Throwable> {
 
         /* If this is a "WebApplicationException" we handle it in a special way */
         if (throwable instanceof WebApplicationException) {
-            final WebApplicationException exception = (WebApplicationException) throwable;
 
             /*
-             * Check the response: if it has an entity, we let it be serialized
-             * by whatever MessageBodyWriter is configured to handle it.
+             * Remember, this only gets called when the exception's entity is
+             * "null", otherwise JAX-RS will simply build the request on its
+             * own and invoke the appropriate MessageBodyWriter...
              */
+            final WebApplicationException exception = (WebApplicationException) throwable;
+
+            /* We don't really care about anything that is not an error. */
             final Response response = exception.getResponse();
-            if (response.hasEntity()) return response;
+            if (response.getStatus() < 400) return response;
 
             /* Return a *NEW* response, with the ExceptionWrapper as entity */
             return Response.fromResponse(response)

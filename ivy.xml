@@ -18,6 +18,8 @@
   <dependencies>
 
     <dependency org="javax" name="ws-rs" rev="latest.release" conf="default"/>
+    <dependency org="javax" name="validation" rev="latest.release" conf="default"/>
+
     <dependency org="com.github" name="mustache" rev="latest.release" conf="default"/>
     <dependency org="org.usrz.libs" name="utils" rev="latest.release" conf="default"/>
     <dependency org="org.usrz.libs" name="logging" rev="latest.release" conf="default"/>

@@ -84,8 +84,7 @@ implements Scoping<WebApplicationExceptionBuilder> {
     public WebApplicationException build() {
         final Response response = responseBuilder.build();
         final Scope scope = scopeBuilder.build();
-        final WebApplicationException exception = new ScopedWebApplicationException(response, scope, message);
-        if (cause != null) exception.initCause(cause);
+        final WebApplicationException exception = new ScopedWebApplicationException(cause, response, scope, message);
         return exception;
     }
 
@@ -269,10 +268,11 @@ implements Scoping<WebApplicationExceptionBuilder> {
 
         private final Scope scope;
 
-        private ScopedWebApplicationException(Response response,
+        private ScopedWebApplicationException(Throwable cause,
+                                              Response response,
                                               Scope scope,
                                               String message) {
-            super(message, response);
+            super(message, cause, response);
             this.scope = scope;
         }
 
