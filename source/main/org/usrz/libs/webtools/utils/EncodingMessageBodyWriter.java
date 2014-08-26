@@ -79,8 +79,12 @@ implements MessageBodyWriter<T> {
                                Type genericType,
                                Annotation[] annotations,
                                MediaType mediaType) {
-        return (this.type.isAssignableFrom(type))
-            && (this.mediaType.isCompatible(mediaType));
+        boolean q = (this.type.isAssignableFrom(type))
+            && (mediaType == null || this.mediaType.isCompatible(mediaType));
+        System.err.println("COMPATIBILITY CHECK FOR " + type + "  IS " + q + " TYPE=" + this.type.isAssignableFrom(type) + " MEDIA=" + this.mediaType.isCompatible(mediaType));
+        System.err.println("THIS MT " + this.mediaType);
+        System.err.println("THAT MT " + mediaType);
+        return q;
     }
 
     @Override
@@ -113,6 +117,7 @@ implements MessageBodyWriter<T> {
             httpHeaders.putSingle(CONTENT_TYPE, actualMediaType.withCharset(this.charset.name()));
             responseCharset = this.charset;
         }
+        System.err.println("HEADER IS " + CONTENT_TYPE + ": " + httpHeaders.get(CONTENT_TYPE));
 
         /* Write the response */
         final OutputStreamWriter entityWriter = new OutputStreamWriter(entityStream, responseCharset);

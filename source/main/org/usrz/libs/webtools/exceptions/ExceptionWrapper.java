@@ -29,10 +29,27 @@ import javax.ws.rs.core.Response.StatusType;
 import javax.ws.rs.core.UriInfo;
 
 import org.usrz.libs.logging.Log;
+import org.usrz.libs.webtools.mustache.MustacheTemplateFactory;
 import org.usrz.libs.webtools.templates.Scope;
 import org.usrz.libs.webtools.templates.TemplateFactory;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.util.StdConverter;
+
+@JsonSerialize(converter=ExceptionWrapper.Converter.class)
 public class ExceptionWrapper implements Scope {
+
+    /* JSON conversion can happen by simply calling the "compute(...)" method */
+    private static class Converter extends StdConverter<ExceptionWrapper, Map<?, ?>>{
+        private static final TemplateFactory factory = new MustacheTemplateFactory();
+
+        @Override
+        public Map<?, ?> convert(ExceptionWrapper value) {
+            return value == null ? null : value.compute(factory);
+        }
+    };
+
+    /* ====================================================================== */
 
     private static final Log log = new Log();
 
