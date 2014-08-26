@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and        *
  * limitations under the License.                                             *
  * ========================================================================== */
-package org.usrz.libs.webtools.exceptions;
+package org.usrz.libs.webtools.utils;
 
-import static com.fasterxml.jackson.databind.SerializationFeature.CLOSE_CLOSEABLE;
-import static com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS;
 import static javax.ws.rs.Priorities.USER;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
@@ -26,7 +24,6 @@ import static org.usrz.libs.utils.Check.notNull;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
-import java.util.Map;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -35,37 +32,51 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.ext.Provider;
 
-import org.usrz.libs.webtools.mustache.MustacheTemplateFactory;
-import org.usrz.libs.webtools.templates.TemplateFactory;
-import org.usrz.libs.webtools.utils.EncodingMessageBodyWriter;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Provider
 @Singleton
-@Priority(USER + 1000)
+@Priority(USER)
 @Produces(APPLICATION_JSON)
-public class JsonExceptionWrapperBodyWriter extends EncodingMessageBodyWriter<ExceptionWrapper> {
+public class JsonMessageBodyWriter extends EncodingMessageBodyWriter<Object> {
 
-    private final TemplateFactory factory;
     private final ObjectMapper mapper;
 
     @Inject
-    private JsonExceptionWrapperBodyWriter(ObjectMapper mapper) {
-        super(ExceptionWrapper.class, APPLICATION_JSON_TYPE, UTF8);
+    private JsonMessageBodyWriter(ObjectMapper mapper) {
+        super(Object.class, APPLICATION_JSON_TYPE, UTF8);
         this.mapper = notNull(mapper, "Null object mapper");
-
-        /* Create the factory and template */
-        factory = new MustacheTemplateFactory();
     }
 
     @Override
-    protected void writeTo(ExceptionWrapper instance, Annotation[] annotations, Writer writer)
+    protected void writeTo(Object instance, Annotation[] annotations, Writer writer)
     throws IOException, WebApplicationException {
-        final Map<String, Object> details = instance.compute(factory);
-        writer.write(mapper.writer(ORDER_MAP_ENTRIES_BY_KEYS)
-                           .without(CLOSE_CLOSEABLE)
-                           .writeValueAsString(details));
+        mapper.writeValue(new Writer() {
+
+            @Override
+            public void write(int c)
+            throws IOException {
+                writer.write(c);
+            }
+
+            @Override
+            public void write(char[] buf, int off, int len)
+            throws IOException {
+                writer.write(buf, off, len);
+            }
+
+            @Override
+            public void flush()
+            throws IOException {
+                writer.flush();
+            }
+
+            @Override
+            public void close() {
+                /* Avoid bug in Jackson always closing */
+            }
+
+        }, instance);
     }
 
 }

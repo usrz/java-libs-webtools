@@ -21,6 +21,7 @@ import org.usrz.libs.configurations.Configurations;
 import org.usrz.libs.configurations.ConfigurationsBuilder;
 import org.usrz.libs.httpd.ServerStarter;
 import org.usrz.libs.testing.NET;
+import org.usrz.libs.webtools.utils.JsonMessageBodyWriter;
 
 public class HtmlExceptionBodyWriterTest extends TestWithServer {
 
@@ -41,7 +42,7 @@ public class HtmlExceptionBodyWriterTest extends TestWithServer {
                 config.register(FailResource.class);
                 config.register(ExceptionWrapperMapper.class);
                 config.register(HtmlExceptionWrapperBodyWriter.class);
-                config.register(JsonExceptionWrapperBodyWriter.class);
+                config.register(JsonMessageBodyWriter.class);
             });
         });
 

@@ -30,6 +30,7 @@ import org.usrz.libs.testing.IO;
 import org.usrz.libs.testing.NET;
 import org.usrz.libs.webtools.mustache.MustacheTemplateManager;
 import org.usrz.libs.webtools.templates.TemplateManager;
+import org.usrz.libs.webtools.utils.JsonMessageBodyWriter;
 
 public class TemplatedExceptionTest extends TestWithServer {
 
@@ -57,8 +58,8 @@ public class TemplatedExceptionTest extends TestWithServer {
             builder.configure(serverConfig.strip("server"));
             builder.serveApp("/fail", (config) -> {
                 config.register(TestResource.class);
+                config.register(JsonMessageBodyWriter.class);
                 config.register(ExceptionWrapperMapper.class);
-                config.register(JsonExceptionWrapperBodyWriter.class);
                 config.register(ViewExceptionWrapperBodyWriter.class);
             });
         });
