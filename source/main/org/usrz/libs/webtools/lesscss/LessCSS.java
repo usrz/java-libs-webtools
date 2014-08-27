@@ -19,13 +19,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import javax.script.Invocable;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
+import org.usrz.libs.logging.Log;
 import org.usrz.libs.utils.Charsets;
+import org.usrz.libs.webtools.resources.Resource;
+import org.usrz.libs.webtools.resources.ResourceManager;
 
 /**
  * A simple wrapper for <a href="http://lesscss.org/">LessCSS</a>.
@@ -35,17 +41,27 @@ import org.usrz.libs.utils.Charsets;
 public class LessCSS {
 
     private static final String ENGINE_TYPE = "application/javascript";
-    private static final String LESS_RESOURCE = "less-rhino-1.7.0.min.js";
+    private static final String LESS_RESOURCE = "less-rhino-1.7.4.js";
     private static final String ADAPTER_RESOURCE = "less-adapter.js";
 
     private final ScriptEngineManager manager = new ScriptEngineManager(this.getClass().getClassLoader());
     private final ScriptEngine engine = manager.getEngineByMimeType(ENGINE_TYPE);
     private final Invocable invocable = (Invocable) engine;
+    private final Function<String, String> fileGetter;
+    private final Log log = new Log();
 
     /**
      * Create a new {@link LessCSS} engine.
      */
     public LessCSS() {
+        this(null);
+    }
+
+    /**
+     * Create a new {@link LessCSS} engine using the specified
+     * {@link ResourceManager} for importing extra content.
+     */
+    public LessCSS(ResourceManager manager) {
         try {
             engine.put(ScriptEngine.FILENAME, LESS_RESOURCE);
             final InputStream lessInput = this.getClass().getResourceAsStream(LESS_RESOURCE);
@@ -59,6 +75,24 @@ public class LessCSS {
         } catch (Exception exception) {
             throw new LessCSSException("Unable to initialize LESS engine", exception);
         }
+
+        /* Our file getter for @include */
+        fileGetter = manager == null ? null : (file) -> {
+            final Resource resource = manager.getResource(file);
+            if (resource != null) {
+                final String less = resource.readString();
+                if (less != null) {
+                    log.debug("Resource \"%s\" imported from \"%s\"", file, resource.getFile().getAbsolutePath());
+                } else {
+                    log.debug("Resource \"%s\" could not be read from \"%s\"", file, resource.getFile().getAbsolutePath());
+                }
+                return less;
+            } else {
+                log.debug("Resource \"%s\" not found");
+                return null;
+            }
+        };
+        engine.getBindings(ScriptContext.ENGINE_SCOPE).put("_less_file_getter", fileGetter);
     }
 
     /**
@@ -66,12 +100,34 @@ public class LessCSS {
      * optionally compressing it.
      */
     public String convert(String less, boolean compress) {
-        final Map<String, Object> options = Collections.singletonMap("compress", compress);
+        return lessc(less, Collections.singletonMap("compress", compress));
+    }
+
+    /**
+     * Convert the specified <em>LessCSS</em> source file into a <em>CSS</em>
+     * optionally compressing it.
+     */
+    public String parse(String fileName, boolean compress) {
+        final String less = fileGetter.apply(fileName);
+        if (less == null) return null;
+
+        final Map<String, Object> options = new HashMap<>();
+        options.put("compress", compress);
+        options.put("filename", fileName);
+
+        return lessc(less, options);
+    }
+
+    protected String lessc(String less, Map<String, Object> options) {
         try {
             return invocable.invokeFunction("_less_process", less, options).toString();
         } catch (Exception exception) {
-            throw new LessCSSException("Unable to convert LESS script", exception);
+            final Object fileName = options.get("filename");
+            if (fileName != null) {
+                throw new LessCSSException("Unable to convert LESS script at " + fileName, exception);
+            } else {
+                throw new LessCSSException("Unable to convert inline LESS script", exception);
+            }
         }
     }
-
 }
