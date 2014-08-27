@@ -39,8 +39,14 @@ import com.fasterxml.jackson.databind.util.StdConverter;
 @JsonSerialize(converter=ExceptionWrapper.Converter.class)
 public class ExceptionWrapper implements Scope {
 
-    /* JSON conversion can happen by simply calling the "compute(...)" method */
-    private static class Converter extends StdConverter<ExceptionWrapper, Map<?, ?>>{
+    /*
+     * JSON conversion can happen by simply calling the "compute(...)" method.
+     *
+     * Package-private, as Eclipse seems to be able to compile it when used
+     * in the @JsonSerialize annotation above, but the normal JDK compiler
+     * seem to be having issues about it...
+     */
+    static class Converter extends StdConverter<ExceptionWrapper, Map<?, ?>>{
         private static final TemplateFactory factory = new MustacheTemplateFactory();
 
         @Override
