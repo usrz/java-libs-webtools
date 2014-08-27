@@ -92,11 +92,17 @@ public class ServeResourceTest extends AbstractTest {
     }
 
     @Test
+    public void testJsonResource()
+    throws Exception {
+        testResource(new File(root, "test.json"), port, "test.json", IO.read("test.json"), "{\"foo\":\"baz\"}".getBytes(), "{\"foo\":\"bar\"}".getBytes());
+    }
+
+    @Test
     public void testBinaryResource()
     throws Exception {
         final byte[] data = IO.read("test.bin");
         IO.copy(data, new File(root, "test.bin"));
-        assertRead(new URL("http://127.0.0.1:" + port + "/resources/test.bin"), data, "Binary resource");
+        assertRead(new URL("http://127.0.0.1:" + port + "/resources/test.bin"), data, "Binary resource", true);
     }
 
     /* ====================================================================== */
@@ -109,29 +115,34 @@ public class ServeResourceTest extends AbstractTest {
         final URL url = new URL("http://127.0.0.1:" + port + "/resources/" + name);
 
         log.debug("Fetching %s with original content", url);
-        assertRead(url, expected, "Original content for " + url);
+        assertRead(url, expected, "Original content for " + url, false);
 
         /* Overwrite the file but preserve last modified */
         IO.copy(update, file);
         file.setLastModified(modified);
 
         log.debug("Fetching %s with modified content (same date)", url);
-        assertRead(url, expected, "Modified content (same date) for " + url);
+        assertRead(url, expected, "Modified content (same date) for " + url, false);
 
         /* "Touch" the resource for cache invalidation */
         file.setLastModified(modified + 10000);
 
         log.debug("Fetching %s with modified content and altered date", url);
-        assertRead(url, update, "Modified content and date for " + url);
+        assertRead(url, update, "Modified content and date for " + url, false);
 
     }
 
-    private void assertRead(URL url, byte[] expected, String message)
+    private void assertRead(URL url, byte[] expected, String message, boolean binary)
     throws Exception {
         final HttpURLConnection connection = openAndDumpHeaders(url);
 
         final byte[] actual = IO.read(connection.getInputStream());
-        assertNotNull(actual);
+        assertNotNull(actual, message);
+        if (!binary) {
+            message = message + "\n  Expected: " + new String(expected)
+                              + "\n    Actual: " + new String(actual)
+                              + "\n   Details:";
+        }
         assertEquals(actual, expected, message);
     }
 
