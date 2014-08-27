@@ -19,6 +19,8 @@ import static org.usrz.libs.utils.Charsets.UTF8;
 import static org.usrz.libs.utils.Check.notNull;
 
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.time.Instant;
@@ -32,6 +34,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -42,6 +46,10 @@ import org.usrz.libs.logging.Log;
 import org.usrz.libs.webtools.lesscss.LessCSS;
 import org.usrz.libs.webtools.uglifyjs.UglifyJS;
 import org.usrz.libs.webtools.utils.MediaTypes;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 
 /**
  * A <em>JAX-RS</em> resource serving static files.
@@ -71,11 +79,13 @@ import org.usrz.libs.webtools.utils.MediaTypes;
 @Singleton
 public class ServeResource {
 
+    private final MediaType jsonMediaType;
     private final MediaType styleMediaType;
     private final MediaType scriptMediaType;
 
     private static final Log log = new Log();
 
+    private final JsonFactory json;
     private final LessCSS less = new LessCSS();
     private final UglifyJS uglify = new UglifyJS();
     private final ConcurrentMap<Resource, Entry> cache = new ConcurrentHashMap<>();
@@ -106,8 +116,34 @@ public class ServeResource {
         cacheControl.setMaxAge((int) cacheDuration.getSeconds());
         cacheControl.setNoCache(Duration.ZERO.equals(cacheDuration));
 
+        jsonMediaType = new MediaType("application", "json").withCharset(charsetName);
         styleMediaType = new MediaType("text", "css").withCharset(charsetName);
         scriptMediaType = new MediaType("application", "javascript").withCharset(charsetName);
+
+        /* Our Json factory, able to read all sorts of weird schtuff */
+        json = new JsonFactory()
+                /* Factory features */
+                .disable(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES)
+                .disable(JsonFactory.Feature.INTERN_FIELD_NAMES)
+                /* Parser features */
+                .enable(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
+                .enable(JsonParser.Feature.ALLOW_COMMENTS)
+                .enable(JsonParser.Feature.ALLOW_NUMERIC_LEADING_ZEROS)
+                .enable(JsonParser.Feature.ALLOW_SINGLE_QUOTES)
+                .enable(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS)
+                .enable(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES)
+                .disable(JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS)
+                .disable(JsonParser.Feature.ALLOW_YAML_COMMENTS)
+                .disable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
+                /* Generator features */
+                .disable(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT)
+                .enable(JsonGenerator.Feature.ESCAPE_NON_ASCII)
+                .enable(JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM)
+                .enable(JsonGenerator.Feature.QUOTE_FIELD_NAMES)
+                .enable(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN)
+                .disable(JsonGenerator.Feature.QUOTE_NON_NUMERIC_NUMBERS)
+                .disable(JsonGenerator.Feature.STRICT_DUPLICATE_DETECTION)
+                .disable(JsonGenerator.Feature.WRITE_NUMBERS_AS_STRINGS);
     }
 
     /**
@@ -115,11 +151,13 @@ public class ServeResource {
      */
     @GET
     @Path("{resource:.*}")
-    public Response serve(@PathParam("resource") String path)
-    throws IOException {
+    public void serve(@Suspended AsyncResponse asyncResponse, @PathParam("resource") String path) {
 
         /* Basic check for null/empty path */
-        if ((path == null) || (path.length() == 0)) throw new NotFoundException();
+        if ((path == null) || (path.length() == 0)) {
+            asyncResponse.resume(new NotFoundException());
+            return;
+        }
 
         /* Get our resource file, potentially a ".less" file for CSS */
         Resource resource = manager.getResource(path);
@@ -129,69 +167,103 @@ public class ServeResource {
         }
 
         /* If the root is incorrect, log this, if not found, 404 it! */
-        if (resource == null) throw new NotFoundException();
+        if (resource == null) {
+            asyncResponse.resume(new NotFoundException());
+            return;
+        }
+
+        /* Ok, we have a resource on disk, this can be potentially long ... */
         final String fileName = resource.getFile().getName();
+        try {
 
-        /* Check and validated our cache */
-        Entry cached = cache.computeIfPresent(resource,
-                (r, entry) -> entry.resource.hasChanged() ? null : entry);
+            /* Check and validated our cache */
+            Entry cached = cache.computeIfPresent(resource,
+                    (r, entry) -> entry.resource.hasChanged() ? null : entry);
 
-        /* If we have no cache, we *might* want to cache something */
-        if (cached == null) {
+            /* If we have no cache, we *might* want to cache something */
+            if (cached == null) {
 
-            /* What to do, what to do? */
-            if ((fileName.endsWith(".css") && minify) || fileName.endsWith(".less")) {
+                /* What to do, what to do? */
+                if ((fileName.endsWith(".css") && minify) || fileName.endsWith(".less")) {
 
-                /* Lessify CSS and cache */
-                log.debug("Lessifying resource \"%s\"", fileName);
-                cached = new Entry(resource,
-                                   less.convert(resource.readString(), minify),
-                                   styleMediaType);
+                    /* Lessify CSS and cache */
+                    log.debug("Lessifying resource \"%s\"", fileName);
+                    cached = new Entry(resource,
+                                       less.convert(resource.readString(), minify),
+                                       styleMediaType);
 
-            } else if (fileName.endsWith(".js") && minify) {
+                } else if (fileName.endsWith(".js") && minify) {
 
-                /* Uglify JavaScript and cache */
-                log.debug("Uglifying resource \"%s\"", fileName);
-                cached = new Entry(resource,
-                                   uglify.convert(resource.readString(), minify, minify),
-                                   scriptMediaType);
+                    /* Uglify JavaScript and cache */
+                    log.debug("Uglifying resource \"%s\"", fileName);
+                    cached = new Entry(resource,
+                                       uglify.convert(resource.readString(), minify, minify),
+                                       scriptMediaType);
+
+                } else if (fileName.endsWith(".json")) {
+
+                    /* Strip comments and normalize JSON */
+                    log.debug("Normalizing JSON resource \"%s\"", fileName);
+
+                    /* All to do with Jackson */
+                    final Reader reader = resource.read();
+                    final StringWriter writer = new StringWriter();
+                    final JsonParser parser = json.createParser(reader);
+                    final JsonGenerator generator = json.createGenerator(writer);
+
+                    /* Not minifying? Means pretty printing! */
+                    if (!minify) generator.useDefaultPrettyPrinter();
+
+                    /* Get our schtuff through the pipeline */
+                    parser.nextToken();
+                    generator.copyCurrentStructure(parser);
+                    generator.flush();
+                    generator.close();
+                    reader.close();
+
+                    /* Cached results... */
+                    cached = new Entry(resource, writer.toString(), jsonMediaType);
+
+                }
+
+                /* Do we have anything to cache? */
+                if (cached != null) {
+                    log.debug("Caching resource \"%s\"", fileName);
+                    cache.put(resource, cached);
+                }
             }
 
-            /* Do we have anything to cache? */
+            /* Prepare our basic response from either cache or file */
+            final ResponseBuilder response = Response.ok();
             if (cached != null) {
-                log.debug("Caching resource \"%s\"", fileName);
-                cache.put(resource, cached);
-            }
-        }
+                log.debug("Serving cached resource \"%s\"", fileName);
+                response.entity(cached.contents)
+                        .lastModified(new Date(resource.lastModifiedAt()))
+                        .type(cached.type);
 
-        /* Prepare our basic response from either cache or file */
-        final ResponseBuilder response = Response.ok();
-        if (cached != null) {
-            log.debug("Serving cached resource \"%s\"", fileName);
-            response.entity(cached.contents)
-                    .lastModified(new Date(resource.lastModifiedAt()))
-                    .type(cached.type);
+            } else {
+                log.debug("Serving file resource \"%s\"", fileName);
 
-        } else {
-            log.debug("Serving file resource \"%s\"", fileName);
+                /* If text/* or application/javascript, append encoding */
+                MediaType type = MediaTypes.get(fileName);
+                if (type.getType().equals("text") || scriptMediaType.isCompatible(type)) {
+                    type = type.withCharset(charsetName);
+                }
 
-            /* If text/* or application/javascript, append encoding */
-            MediaType type = MediaTypes.get(fileName);
-            if (type.getType().equals("text") || scriptMediaType.isCompatible(type)) {
-                type = type.withCharset(charsetName);
+                /* Our file is served! */
+                response.entity(resource.getFile())
+                        .lastModified(new Date(resource.lastModifiedAt()))
+                        .type(type);
             }
 
-            /* Our file is served! */
-            response.entity(resource.getFile())
-                    .lastModified(new Date(resource.lastModifiedAt()))
-                    .type(type);
-        }
+            /* Caching headers and build response */
+            final Date expires = Date.from(Instant.now().plus(cacheDuration));
+            asyncResponse.resume(response.expires(expires).build());
 
-        /* Caching headers and build response */
-        final Date expires = Date.from(Instant.now().plus(cacheDuration));
-        return response.cacheControl(cacheControl)
-                       .expires(expires)
-                       .build();
+        } catch (Exception exception) {
+            log.warn(exception, "Exception processing resource \"%s\"", fileName);
+            asyncResponse.resume(exception);
+        }
     }
 
     /* ====================================================================== */
