@@ -33,14 +33,38 @@ import org.usrz.libs.utils.Check;
 
 public final class Resource {
 
+    private final ResourceManager manager;
     private final Charset charset;
     private final File file;
 
     private long lastAccessedAt = -1;
 
-    Resource(File file, Charset charset) {
+    Resource(ResourceManager manager, File file, Charset charset) {
+        this.manager = Check.notNull(manager, "Null resource manager");
         this.charset = Check.notNull(charset, "Null charset");
         this.file = Check.notNull(file, "Null file");
+    }
+
+    /* ====================================================================== */
+
+    public ResourceManager getResourceManager() {
+        return manager;
+    }
+
+    public Resource getResource(String fileName) {
+        final File relative = new File(file.getParent(), fileName);
+        return manager.getResource(relative);
+    }
+
+    public File getFile() {
+        return file;
+    }
+
+    public String getPath() {
+        final String root = manager.getRootPath().getAbsolutePath() + "/";
+        final String path = file.getAbsolutePath();
+        if (path.startsWith(root)) return path.substring(root.length());
+        throw new IllegalStateException("Huh? Root is " + root + " but path is " + path);
     }
 
     /* ====================================================================== */
@@ -106,10 +130,6 @@ public final class Resource {
 
     public boolean hasChanged() {
         return lastAccessedAt != lastModifiedAt();
-    }
-
-    public File getFile() {
-        return file;
     }
 
     /* ====================================================================== */

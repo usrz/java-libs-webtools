@@ -15,10 +15,11 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.lesscss;
 
+import static java.util.Collections.singletonMap;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -31,7 +32,6 @@ import javax.script.ScriptEngineManager;
 import org.usrz.libs.logging.Log;
 import org.usrz.libs.utils.Charsets;
 import org.usrz.libs.webtools.resources.Resource;
-import org.usrz.libs.webtools.resources.ResourceManager;
 
 /**
  * A simple wrapper for <a href="http://lesscss.org/">LessCSS</a>.
@@ -44,24 +44,17 @@ public class LessCSS {
     private static final String LESS_RESOURCE = "less-rhino-1.7.4.js";
     private static final String ADAPTER_RESOURCE = "less-adapter.js";
 
+    private final ThreadLocal<Resource> resources = new ThreadLocal<>();
+
     private final ScriptEngineManager manager = new ScriptEngineManager(this.getClass().getClassLoader());
     private final ScriptEngine engine = manager.getEngineByMimeType(ENGINE_TYPE);
     private final Invocable invocable = (Invocable) engine;
-    private final Function<String, String> fileGetter;
     private final Log log = new Log();
 
     /**
      * Create a new {@link LessCSS} engine.
      */
     public LessCSS() {
-        this(null);
-    }
-
-    /**
-     * Create a new {@link LessCSS} engine using the specified
-     * {@link ResourceManager} for importing extra content.
-     */
-    public LessCSS(ResourceManager manager) {
         try {
             engine.put(ScriptEngine.FILENAME, LESS_RESOURCE);
             final InputStream lessInput = this.getClass().getResourceAsStream(LESS_RESOURCE);
@@ -77,22 +70,33 @@ public class LessCSS {
         }
 
         /* Our file getter for @include */
-        fileGetter = manager == null ? null : (file) -> {
-            final Resource resource = manager.getResource(file);
-            if (resource != null) {
-                final String less = resource.readString();
-                if (less != null) {
-                    log.debug("Resource \"%s\" imported from \"%s\"", file, resource.getFile().getAbsolutePath());
-                } else {
-                    log.debug("Resource \"%s\" could not be read from \"%s\"", file, resource.getFile().getAbsolutePath());
-                }
-                return less;
-            } else {
-                log.debug("Resource \"%s\" not found");
-                return null;
-            }
-        };
-        engine.getBindings(ScriptContext.ENGINE_SCOPE).put("_less_file_getter", fileGetter);
+        engine.getBindings(ScriptContext.ENGINE_SCOPE).put("_less_file_getter",
+
+                /* Use lamba, easier */
+                (Function<String, String>) (file) -> {
+
+                    /* Check that we have a resource useable to resolve relative files */
+                    final Resource originalResource = resources.get();
+                    if (originalResource == null) {
+                        log.warn("Unable to @import \"%s\" when converting a string", file);
+                        return null;
+                    }
+
+                    /* Less already "resolves" path names for us, use the manager */
+                    final Resource resource = originalResource.getResourceManager().getResource(file);
+                    if (resource != null) {
+                        final String less = resource.readString();
+                        if (less != null) {
+                            log.debug("Resource \"%s\" imported from \"%s\"", file, resource.getFile().getAbsolutePath());
+                        } else {
+                            log.debug("Resource \"%s\" could not be read from \"%s\"", file, resource.getFile().getAbsolutePath());
+                        }
+                        return less;
+                    } else {
+                        log.debug("Resource \"%s\" not found");
+                        return null;
+                    }
+                });
     }
 
     /**
@@ -100,34 +104,44 @@ public class LessCSS {
      * optionally compressing it.
      */
     public String convert(String less, boolean compress) {
-        return lessc(less, Collections.singletonMap("compress", compress));
+        if (less == null) return null;
+
+        try {
+            final Map<String, Object> options = singletonMap("compress", compress);
+            final Object css = invocable.invokeFunction("_less_process", less, options);
+            return css == null ? null : css instanceof String ? (String) css : css.toString();
+        } catch (Exception exception) {
+            throw new LessCSSException("Unable to convert LESS script", exception);
+        }
     }
 
     /**
      * Convert the specified <em>LessCSS</em> source file into a <em>CSS</em>
      * optionally compressing it.
      */
-    public String parse(String fileName, boolean compress) {
-        final String less = fileGetter.apply(fileName);
+    public String convert(Resource resource, boolean compress) {
+
+        /* Be kind if the resource does not exist */
+        if (resource == null) return null;
+        final String less = resource.readString();
         if (less == null) return null;
 
+        /* Create our map of options */
         final Map<String, Object> options = new HashMap<>();
+        options.put("filename", resource.getPath());
         options.put("compress", compress);
-        options.put("filename", fileName);
 
-        return lessc(less, options);
-    }
+        /* Remember our resource in the threadlocal */
+        resources.set(resource);
 
-    protected String lessc(String less, Map<String, Object> options) {
         try {
-            return invocable.invokeFunction("_less_process", less, options).toString();
+            /* Go! */
+            final Object css = invocable.invokeFunction("_less_process", less, options);
+            return css == null ? null : css instanceof String ? (String) css : css.toString();
         } catch (Exception exception) {
-            final Object fileName = options.get("filename");
-            if (fileName != null) {
-                throw new LessCSSException("Unable to convert LESS script at " + fileName, exception);
-            } else {
-                throw new LessCSSException("Unable to convert inline LESS script", exception);
-            }
+            throw new LessCSSException("Unable to convert LESS script at " + resource.getFile().getAbsolutePath(), exception);
+        } finally {
+            resources.remove();
         }
     }
 }

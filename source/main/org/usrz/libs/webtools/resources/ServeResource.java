@@ -86,7 +86,7 @@ public class ServeResource {
     private static final Log log = new Log();
 
     private final JsonFactory json;
-    private final LessCSS less = new LessCSS();
+    private final LessCSS lxess = new LessCSS();
     private final UglifyJS uglify = new UglifyJS();
     private final ConcurrentMap<Resource, Entry> cache = new ConcurrentHashMap<>();
 
@@ -189,7 +189,7 @@ public class ServeResource {
                     /* Lessify CSS and cache */
                     log.debug("Lessifying resource \"%s\"", fileName);
                     cached = new Entry(resource,
-                                       less.convert(resource.readString(), minify),
+                                       lxess.convert(resource, minify),
                                        styleMediaType);
 
                 } else if (fileName.endsWith(".js") && minify) {

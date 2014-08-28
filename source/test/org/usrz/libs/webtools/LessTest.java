@@ -28,6 +28,7 @@ import org.usrz.libs.webtools.resources.ResourceManager;
 
 public class LessTest extends AbstractTest {
 
+    private ResourceManager manager;
     private LessCSS lessc;
 
     @BeforeClass
@@ -35,8 +36,8 @@ public class LessTest extends AbstractTest {
         final File file = new File(this.getClass().getResource("import.less").getPath());
         final File directory = file.getParentFile();
 
-        final ResourceManager manager = new ResourceManager(directory, UTF8);
-        lessc = new LessCSS(manager);
+        manager = new ResourceManager(directory, UTF8);
+        lessc = new LessCSS();
     }
 
     @Test(priority=1)
@@ -60,7 +61,7 @@ public class LessTest extends AbstractTest {
     @Test(priority=3)
     public void testLessImport()
     throws Exception {
-        final String result = lessc.parse("import.less", true);
+        final String result = lessc.convert(manager.getResource("import.less"), true);
         final String css = new String(IO.read("import.min.css"), UTF8);
         assertEquals(result, css);
     }
@@ -68,7 +69,7 @@ public class LessTest extends AbstractTest {
     @Test(priority=999)
     public void testLessBootstrap()
     throws Exception {
-        final String result = lessc.parse("bootstrap/bootstrap.less", true);
+        final String result = lessc.convert(manager.getResource("bootstrap/bootstrap.less"), true);
         final String css = new String(IO.read("bootstrap.min.css"), UTF8);
         assertEquals(result, css);
     }
