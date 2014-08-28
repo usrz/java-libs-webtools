@@ -42,6 +42,14 @@ public class ResourceManager {
         }
     }
 
+    public File getRootPath() {
+        return root;
+    }
+
+    public Charset getDefaultCharset() {
+        return charset;
+    }
+
     public Resource getResource(String fileName) {
         return getResource(new File(root, fileName));
     }
@@ -68,7 +76,7 @@ public class ResourceManager {
             }
 
             /* Return our resource */
-            return new Resource(canonical, charset);
+            return new Resource(this, canonical, charset);
 
         } catch (IOException exception) {
             throw new ResourceException("I/O error accessing \"" + file + "\"");

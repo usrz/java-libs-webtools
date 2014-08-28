@@ -85,10 +85,18 @@ public class ServeResourceTest extends AbstractTest {
         testResource(new File(root, "test.less"), port, "test.css",  IO.read("test.less"), ".foo{left:1px}".getBytes(), IO.read("test.min.css"));
     }
 
-    @Test
+    @Test(priority=1)
     public void testLessResource()
     throws Exception {
         testResource(new File(root, "test.less"), port, "test.less", IO.read("test.less"), ".foo{left:1px}".getBytes(), IO.read("test.min.css"));
+    }
+
+    @Test(priority=2)
+    public void testLessResourceImport()
+    throws Exception {
+        /* Restore "test.less" before testing import */
+        IO.copy(IO.read("test.less"), new File(root, "test.less"));
+        testResource(new File(root, "import.less"), port, "import.less", IO.read("import.less"), ".foo{left:1px}".getBytes(), IO.read("import.min.css"));
     }
 
     @Test

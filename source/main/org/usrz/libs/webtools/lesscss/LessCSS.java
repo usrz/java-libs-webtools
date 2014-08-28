@@ -15,17 +15,23 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.lesscss;
 
+import static java.util.Collections.singletonMap;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import javax.script.Invocable;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
+import org.usrz.libs.logging.Log;
 import org.usrz.libs.utils.Charsets;
+import org.usrz.libs.webtools.resources.Resource;
 
 /**
  * A simple wrapper for <a href="http://lesscss.org/">LessCSS</a>.
@@ -35,12 +41,15 @@ import org.usrz.libs.utils.Charsets;
 public class LessCSS {
 
     private static final String ENGINE_TYPE = "application/javascript";
-    private static final String LESS_RESOURCE = "less-rhino-1.7.0.min.js";
+    private static final String LESS_RESOURCE = "less-rhino-1.7.4.js";
     private static final String ADAPTER_RESOURCE = "less-adapter.js";
+
+    private final ThreadLocal<Resource> resources = new ThreadLocal<>();
 
     private final ScriptEngineManager manager = new ScriptEngineManager(this.getClass().getClassLoader());
     private final ScriptEngine engine = manager.getEngineByMimeType(ENGINE_TYPE);
     private final Invocable invocable = (Invocable) engine;
+    private final Log log = new Log();
 
     /**
      * Create a new {@link LessCSS} engine.
@@ -59,6 +68,35 @@ public class LessCSS {
         } catch (Exception exception) {
             throw new LessCSSException("Unable to initialize LESS engine", exception);
         }
+
+        /* Our file getter for @include */
+        engine.getBindings(ScriptContext.ENGINE_SCOPE).put("_less_file_getter",
+
+                /* Use lamba, easier */
+                (Function<String, String>) (file) -> {
+
+                    /* Check that we have a resource useable to resolve relative files */
+                    final Resource originalResource = resources.get();
+                    if (originalResource == null) {
+                        log.warn("Unable to @import \"%s\" when converting a string", file);
+                        return null;
+                    }
+
+                    /* Less already "resolves" path names for us, use the manager */
+                    final Resource resource = originalResource.getResourceManager().getResource(file);
+                    if (resource != null) {
+                        final String less = resource.readString();
+                        if (less != null) {
+                            log.debug("Resource \"%s\" imported from \"%s\"", file, resource.getFile().getAbsolutePath());
+                        } else {
+                            log.debug("Resource \"%s\" could not be read from \"%s\"", file, resource.getFile().getAbsolutePath());
+                        }
+                        return less;
+                    } else {
+                        log.debug("Resource \"%s\" not found");
+                        return null;
+                    }
+                });
     }
 
     /**
@@ -66,12 +104,44 @@ public class LessCSS {
      * optionally compressing it.
      */
     public String convert(String less, boolean compress) {
-        final Map<String, Object> options = Collections.singletonMap("compress", compress);
+        if (less == null) return null;
+
         try {
-            return invocable.invokeFunction("_less_process", less, options).toString();
+            final Map<String, Object> options = singletonMap("compress", compress);
+            final Object css = invocable.invokeFunction("_less_process", less, options);
+            return css == null ? null : css instanceof String ? (String) css : css.toString();
         } catch (Exception exception) {
             throw new LessCSSException("Unable to convert LESS script", exception);
         }
     }
 
+    /**
+     * Convert the specified <em>LessCSS</em> source file into a <em>CSS</em>
+     * optionally compressing it.
+     */
+    public String convert(Resource resource, boolean compress) {
+
+        /* Be kind if the resource does not exist */
+        if (resource == null) return null;
+        final String less = resource.readString();
+        if (less == null) return null;
+
+        /* Create our map of options */
+        final Map<String, Object> options = new HashMap<>();
+        options.put("filename", resource.getPath());
+        options.put("compress", compress);
+
+        /* Remember our resource in the threadlocal */
+        resources.set(resource);
+
+        try {
+            /* Go! */
+            final Object css = invocable.invokeFunction("_less_process", less, options);
+            return css == null ? null : css instanceof String ? (String) css : css.toString();
+        } catch (Exception exception) {
+            throw new LessCSSException("Unable to convert LESS script at " + resource.getFile().getAbsolutePath(), exception);
+        } finally {
+            resources.remove();
+        }
+    }
 }
