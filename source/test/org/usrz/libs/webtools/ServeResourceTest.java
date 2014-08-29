@@ -41,14 +41,23 @@ public class ServeResourceTest extends AbstractTest {
     throws Exception {
         root = IO.makeTempDir();
 
-        port = NET.serverPort();
+        if (port < 1024) port = NET.serverPort();
         final Configurations serverConfig = new ConfigurationsBuilder()
                     .put("server.listener.port", port)
                     .put("server.listener.host", "127.0.0.1")
                     .put("server.listener.secure", false)
+                    .put("server.access_log.file", "/dev/stdout")
+                    .put("server.access_log.format", "%{HH:mm:ss.SSS}t [-----] \"%r\" %s (%b bytes / %{milli}T ms)")
+                    .put("server.access_log.synchronous", true)
                     .put("resources.root_path", root)
                     .put("resources.minify", true)
                     .put("resources.cache", "1 hour")
+                    .put("resources.executor.core_pool_size", 10)
+                    .put("resources.executor.maximum_pool_size", 50)
+                    .put("resources.executor.notifier_threads", 5)
+                    .put("resources.executor.keep_alive_time", "10 sec")
+                    .put("resources.executor.queue_size", 10)
+                    .put("resources.executor.executor_name", "ServeResourceTest")
                     .build();
 
         starter = new ServerStarter().start((builder) -> {
@@ -165,4 +174,25 @@ public class ServeResourceTest extends AbstractTest {
         });
         return connection;
     }
+
+    /* ====================================================================== */
+
+    public static void main(String[] args) throws Exception {
+        final ServeResourceTest test = new ServeResourceTest();
+        test.port = 55555; // set the port!
+        test.before();
+
+        IO.copy("test.bin",  new File(test.root, "test.bin"));
+        IO.copy("test.less", new File(test.root, "test.less"));
+        IO.copy("test.js",   new File(test.root, "test.js"));
+        System.out.println("Files copied at:");
+        System.out.println(" - " + test.root);
+        System.out.println("Try benchmarking:");
+        System.out.println(" - http://127.0.0.1:" + test.port + "/resources/test.bin");
+        System.out.println(" - http://127.0.0.1:" + test.port + "/resources/test.css");
+        System.out.println(" - http://127.0.0.1:" + test.port + "/resources/test.js");
+        Thread.sleep(Long.MAX_VALUE);
+    }
+
+
 }
