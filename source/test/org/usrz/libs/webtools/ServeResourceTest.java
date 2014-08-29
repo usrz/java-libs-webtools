@@ -142,7 +142,9 @@ public class ServeResourceTest extends AbstractTest {
         assertRead(url, expected, "Modified content (same date) for " + url, false);
 
         /* "Touch" the resource for cache invalidation */
-        file.setLastModified(modified + 10000);
+        Thread.sleep(500); // ServeResource might take a little while to release the last request for the same URL
+        assertTrue(file.setLastModified(modified + 10000), "Unable to \"touch\" file " + file);
+        assertNotEquals(file.lastModified(), modified, "Last modified date not changed in file " + file);
 
         log.debug("Fetching %s with modified content and altered date", url);
         assertRead(url, update, "Modified content and date for " + url, false);
