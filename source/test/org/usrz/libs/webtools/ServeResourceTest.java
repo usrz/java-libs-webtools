@@ -41,7 +41,7 @@ public class ServeResourceTest extends AbstractTest {
     throws Exception {
         root = IO.makeTempDir();
 
-        port = NET.serverPort();
+        if (port < 1024) port = NET.serverPort();
         final Configurations serverConfig = new ConfigurationsBuilder()
                     .put("server.listener.port", port)
                     .put("server.listener.host", "127.0.0.1")
@@ -174,4 +174,25 @@ public class ServeResourceTest extends AbstractTest {
         });
         return connection;
     }
+
+    /* ====================================================================== */
+
+    public static void main(String[] args) throws Exception {
+        final ServeResourceTest test = new ServeResourceTest();
+        test.port = 55555; // set the port!
+        test.before();
+
+        IO.copy("test.bin",  new File(test.root, "test.bin"));
+        IO.copy("test.less", new File(test.root, "test.less"));
+        IO.copy("test.js",   new File(test.root, "test.js"));
+        System.out.println("Files copied at:");
+        System.out.println(" - " + test.root);
+        System.out.println("Try benchmarking:");
+        System.out.println(" - http://127.0.0.1:" + test.port + "/resources/test.bin");
+        System.out.println(" - http://127.0.0.1:" + test.port + "/resources/test.css");
+        System.out.println(" - http://127.0.0.1:" + test.port + "/resources/test.js");
+        Thread.sleep(Long.MAX_VALUE);
+    }
+
+
 }
