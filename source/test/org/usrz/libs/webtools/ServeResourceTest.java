@@ -46,9 +46,18 @@ public class ServeResourceTest extends AbstractTest {
                     .put("server.listener.port", port)
                     .put("server.listener.host", "127.0.0.1")
                     .put("server.listener.secure", false)
+                    .put("server.access_log.file", "/dev/stdout")
+                    .put("server.access_log.format", "%{HH:mm:ss.SSS}t [-----] \"%r\" %s (%b bytes / %{milli}T ms)")
+                    .put("server.access_log.synchronous", true)
                     .put("resources.root_path", root)
                     .put("resources.minify", true)
                     .put("resources.cache", "1 hour")
+                    .put("resources.executor.core_pool_size", 10)
+                    .put("resources.executor.maximum_pool_size", 50)
+                    .put("resources.executor.notifier_threads", 5)
+                    .put("resources.executor.keep_alive_time", "10 sec")
+                    .put("resources.executor.queue_size", 10)
+                    .put("resources.executor.executor_name", "ServeResourceTest")
                     .build();
 
         starter = new ServerStarter().start((builder) -> {
