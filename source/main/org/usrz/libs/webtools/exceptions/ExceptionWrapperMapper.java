@@ -94,7 +94,6 @@ public class ExceptionWrapperMapper implements ExceptionMapper<Throwable> {
             if (response.getStatus() < 400) return response;
 
             /* Return a *NEW* response, with the ExceptionWrapper as entity */
-            System.err.println("WRAPPER FROM " + exception);
             return Response.fromResponse(response)
                            .entity(wrapAndLog(exception))
                            .build();
