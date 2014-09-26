@@ -16,6 +16,7 @@
 package org.usrz.libs.webtools.lesscss;
 
 import static java.util.Collections.singletonMap;
+import static org.usrz.libs.utils.Charsets.UTF8;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +31,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
 import org.usrz.libs.logging.Log;
-import org.usrz.libs.utils.Charsets;
 import org.usrz.libs.webtools.resources.Resource;
 
 /**
@@ -59,12 +59,16 @@ public class LessCSS {
             engine.put(ScriptEngine.FILENAME, LESS_RESOURCE);
             final InputStream lessInput = this.getClass().getResourceAsStream(LESS_RESOURCE);
             if (lessInput == null) throw new IOException("Resource " + LESS_RESOURCE + " not found");
-            engine.eval(new InputStreamReader(lessInput, Charsets.UTF8));
+            final InputStreamReader lessReader = new InputStreamReader(lessInput, UTF8);
+            engine.eval(lessReader);
+            lessReader.close();
 
             engine.put(ScriptEngine.FILENAME, ADAPTER_RESOURCE);
             final InputStream adapterInput = this.getClass().getResourceAsStream(ADAPTER_RESOURCE);
             if (adapterInput == null) throw new IOException("Resource " + ADAPTER_RESOURCE + " not found");
-            engine.eval(new InputStreamReader(adapterInput, Charsets.UTF8));
+            final InputStreamReader adapterReader = new InputStreamReader(adapterInput, UTF8);
+            engine.eval(adapterReader);
+            adapterReader.close();
         } catch (Exception exception) {
             throw new LessCSSException("Unable to initialize LESS engine", exception);
         }

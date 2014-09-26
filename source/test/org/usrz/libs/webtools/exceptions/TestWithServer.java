@@ -92,6 +92,7 @@ public abstract class TestWithServer extends AbstractTest {
         return request(path, null);
     }
 
+    @SuppressWarnings("resource")
     protected Response request(String path, String accept)
     throws Exception {
         URL url = new URL("http://127.0.0.1:" + port + path);
@@ -112,6 +113,8 @@ public abstract class TestWithServer extends AbstractTest {
         if (stream == null) stream = connection.getInputStream();
 
         final String actual = new String(IO.read(stream), UTF8);
+        stream.close();
+
         System.out.println(">>> " + actual.replace("\n", "\n>>> "));
         return new Response(connection.getResponseCode(),
                             connection.getHeaderField("Content-Type"),

@@ -15,6 +15,8 @@
  * ========================================================================== */
 package org.usrz.libs.webtools.uglifyjs;
 
+import static org.usrz.libs.utils.Charsets.UTF8;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -28,7 +30,6 @@ import javax.script.ScriptEngineManager;
 
 import org.usrz.libs.logging.Log;
 import org.usrz.libs.logging.Logging;
-import org.usrz.libs.utils.Charsets;
 
 /**
  * A simple wrapper for <a href="https://github.com/mishoo/UglifyJS2">UglifyJS
@@ -53,14 +54,18 @@ public class UglifyJS {
         Logging.init();
         try {
             engine.put(ScriptEngine.FILENAME, UGLIFY_RESOURCE);
-            final InputStream lessInput = this.getClass().getResourceAsStream(UGLIFY_RESOURCE);
-            if (lessInput == null) throw new IOException("Resource " + UGLIFY_RESOURCE + " not found");
-            engine.eval(new InputStreamReader(lessInput, Charsets.UTF8));
+            final InputStream uglifyInput = this.getClass().getResourceAsStream(UGLIFY_RESOURCE);
+            if (uglifyInput == null) throw new IOException("Resource " + UGLIFY_RESOURCE + " not found");
+            final InputStreamReader lessReader = new InputStreamReader(uglifyInput, UTF8);
+            engine.eval(lessReader);
+            lessReader.close();
 
             engine.put(ScriptEngine.FILENAME, ADAPTER_RESOURCE);
             final InputStream adapterInput = this.getClass().getResourceAsStream(ADAPTER_RESOURCE);
             if (adapterInput == null) throw new IOException("Resource " + ADAPTER_RESOURCE + " not found");
-            engine.eval(new InputStreamReader(adapterInput, Charsets.UTF8));
+            final InputStreamReader adapterReader = new InputStreamReader(adapterInput, UTF8);
+            engine.eval(adapterReader);
+            adapterReader.close();
 
             engine.getBindings(ScriptContext.GLOBAL_SCOPE).put("__logger", new Log());
         } catch (Exception exception) {
@@ -71,13 +76,13 @@ public class UglifyJS {
     /**
      * Uglify the specified <em>JavaScript</em> source.
      */
-    public String convert(String less, boolean compress, boolean mangle) {
+    public String convert(String script, boolean compress, boolean mangle) {
         final Map<String, Object> options = new HashMap<>();
         options.put("compress", compress);
         options.put("mangle", mangle);
 
         try {
-            return invocable.invokeFunction("_uglify_process", less, options).toString();
+            return invocable.invokeFunction("_uglify_process", script, options).toString();
         } catch (Exception exception) {
             throw new UglifyJSException("Unable to uglify script", exception);
         }
