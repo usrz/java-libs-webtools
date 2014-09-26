@@ -274,6 +274,7 @@ public class ServeResource {
                 generator.flush();
                 generator.close();
                 reader.close();
+                parser.close();
 
                 /* Cached results... */
                 cached = new Entry(resource, writer.toString(), jsonMediaType);
